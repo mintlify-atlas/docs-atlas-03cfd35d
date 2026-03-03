@@ -1,0 +1,92 @@
+{
+  "projectType": "saas",
+  "projectName": "BloxChat",
+  "projectDescription": "A Windows desktop chat companion for Roblox games with real-time messaging and account verification",
+  "theme": "palm",
+  "primaryColor": "#5865F2",
+  "lightColor": "#7289DA",
+  "darkColor": "#4752C4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/using-the-app",
+              "guides/configuration",
+              "guides/verification-flow",
+              "guides/troubleshooting"
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/server-setup",
+              "self-hosting/environment-variables",
+              "self-hosting/game-integration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Auth Endpoints",
+            "pages": [
+              "api/auth/begin-verification",
+              "api/auth/complete-verification",
+              "api/auth/check-verification",
+              "api/auth/refresh"
+            ]
+          },
+          {
+            "group": "Chat Endpoints",
+            "pages": [
+              "api/chat/limits",
+              "api/chat/publish",
+              "api/chat/subscribe"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Roblox account verification flow",
+    "Real-time chat by JobId (server-based channels)",
+    "Reply threading and local commands",
+    "Auto-update support for Windows",
+    "Configurable API URL, logs path, opacity, and settings",
+    "tRPC API with WebSocket subscriptions",
+    "Rate limiting and chat message controls",
+    "Discord Rich Presence integration"
+  ],
+  "publicApiSurface": [
+    "auth.beginVerification",
+    "auth.completeVerification",
+    "auth.checkVerification",
+    "auth.refresh",
+    "chat.limits",
+    "chat.publish",
+    "chat.subscribe"
+  ]
+}
