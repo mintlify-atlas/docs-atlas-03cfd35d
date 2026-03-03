@@ -1,0 +1,150 @@
+---
+title: "Refresh"
+description: "Refresh an expired or expiring JWT token"
+---
+
+## Overview
+
+Refreshes a JWT token by validating the existing token and issuing a new one with updated user information from Roblox.
+
+## Procedure Type
+
+**Mutation** - This endpoint generates a new authentication token.
+
+## Input Parameters
+
+<ParamField path="jwt" type="string" required>
+  The existing JWT token to refresh. Can be expired or still valid.
+  
+  **Validation:**
+  - Must be a valid JWT signed with the correct secret
+  - Must contain a valid `robloxUserId` field
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="jwt" type="string" required>
+  New JSON Web Token for authenticated API requests. Valid for 1 hour.
+</ResponseField>
+
+<ResponseField name="user" type="JwtUser" required>
+  Updated user information fetched from Roblox.
+  
+  **JwtUser fields:**
+  - `robloxUserId` (string): The user's Roblox user ID
+  - `username` (string): The user's current Roblox username
+  - `displayName` (string): The user's current Roblox display name
+  - `picture` (string): URL to the user's current Roblox avatar headshot (420x420 PNG)
+</ResponseField>
+
+## Rate Limiting
+
+**Per User:**
+- **Limit:** 4 requests per user
+- **Window:** 3600 seconds (1 hour)
+- **Key:** `robloxUserId` from JWT payload
+
+When rate limit is exceeded:
+- **Error Code:** `TOO_MANY_REQUESTS`
+- **Message:** `Rate limit hit. Try again in {seconds}s.`
+
+## Error Codes
+
+<ResponseField name="TOO_MANY_REQUESTS" type="error">
+  Rate limit exceeded for this user. Tokens can only be refreshed 4 times per hour.
+  
+  **Message:** `Rate limit hit. Try again in {seconds}s.`
+</ResponseField>
+
+<ResponseField name="UNAUTHORIZED" type="error">
+  Invalid or malformed JWT token.
+  
+  **Possible Messages:**
+  - `Invalid session` - JWT signature verification failed
+  - `Invalid session payload` - JWT payload missing required fields or incorrect format
+  - `Failed to fetch Roblox user profile` - User ID in JWT is invalid
+</ResponseField>
+
+<ResponseField name="INTERNAL_SERVER_ERROR" type="error">
+  Failed to retrieve updated user information from Roblox API.
+  
+  **Possible Messages:**
+  - `Failed to fetch Roblox user headshot`
+  - `Roblox user headshot not available`
+</ResponseField>
+
+## Example Usage
+
+```typescript
+import { trpc } from './trpc';
+
+// Refresh before token expires
+const currentJwt = localStorage.getItem('authToken');
+
+try {
+  const refreshed = await trpc.auth.refresh.mutate({
+    jwt: currentJwt
+  });
+  
+  // Store new token
+  localStorage.setItem('authToken', refreshed.jwt);
+  
+  // User info is updated from Roblox
+  console.log('Refreshed as:', refreshed.user.username);
+  console.log('Display name:', refreshed.user.displayName);
+  console.log('Avatar:', refreshed.user.picture);
+} catch (error) {
+  if (error.code === 'UNAUTHORIZED') {
+    // Token is invalid, need to re-authenticate
+    console.error('Invalid token, please log in again');
+    localStorage.removeItem('authToken');
+  } else if (error.code === 'TOO_MANY_REQUESTS') {
+    // Rate limited, use existing token
+    console.warn('Refresh rate limit hit:', error.message);
+  }
+}
+```
+
+## Proactive Refresh Pattern
+
+```typescript
+import { trpc } from './trpc';
+import { jwtDecode } from 'jwt-decode';
+
+function shouldRefreshToken(jwt: string): boolean {
+  try {
+    const decoded = jwtDecode(jwt);
+    const expiresAt = decoded.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    // Refresh if token expires in less than 5 minutes
+    return expiresAt - now < fiveMinutes;
+  } catch {
+    return true; // Token is invalid, should refresh
+  }
+}
+
+const currentJwt = localStorage.getItem('authToken');
+
+if (currentJwt && shouldRefreshToken(currentJwt)) {
+  const refreshed = await trpc.auth.refresh.mutate({ jwt: currentJwt });
+  localStorage.setItem('authToken', refreshed.jwt);
+}
+```
+
+## Use Cases
+
+- Refreshing expired JWTs without requiring re-authentication
+- Proactively refreshing tokens before they expire
+- Updating user profile information (username, display name, avatar) from Roblox
+- Maintaining long-lived authenticated sessions
+
+## Implementation Notes
+
+- The JWT expiration is ignored during verification (using `ignoreExpiration: true`)
+- Fresh user data is fetched from Roblox on every refresh
+- This means username and display name changes on Roblox are reflected immediately
+- Rate limiting is strict (4 per hour) to prevent abuse
+- The new JWT is valid for 1 hour from the refresh time
+- If a user's Roblox account is deleted or invalid, the refresh will fail with `UNAUTHORIZED`

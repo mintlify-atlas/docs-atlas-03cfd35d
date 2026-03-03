@@ -1,0 +1,499 @@
+---
+title: 'Authentication'
+description: 'JWT-based authentication system, verification flow, token management, and protected procedures'
+---
+
+## Overview
+
+BloxChat uses **JWT (JSON Web Token)** authentication to secure API endpoints. The authentication system integrates with Roblox's user profiles and provides a secure verification flow for linking Roblox users to chat sessions.
+
+<Info>
+  All authentication logic is implemented in `packages/api/src/routers/auth.ts` and `packages/api/src/context.ts`.
+</Info>
+
+## Authentication Flow
+
+The complete authentication process follows this sequence:
+
+<Steps>
+  <Step title="Begin Verification">
+    Client calls `auth.beginVerification` to receive a verification code and session ID.
+    
+    ```typescript
+    const { sessionId, code, placeId } = await client.auth.beginVerification.mutate();
+    // Display code to user: "Enter code 123456 in the game"
+    ```
+  </Step>
+  
+  <Step title="User Enters Code in Game">
+    User enters the verification code inside the Roblox game. The game server validates the code with the API.
+  </Step>
+  
+  <Step title="Game Server Completes Verification">
+    Game server calls `auth.completeVerification` with the verification secret, code, and Roblox user ID.
+    
+    ```typescript
+    await client.auth.completeVerification.mutate({
+      code: '123456',
+      robloxUserId: '123456789'
+    });
+    ```
+    
+    <Note>
+      This endpoint requires the `x-verification-secret` header and is only called by trusted game servers.
+    </Note>
+  </Step>
+  
+  <Step title="Client Polls for Completion">
+    Client repeatedly calls `auth.checkVerification` until the session is verified.
+    
+    ```typescript
+    const result = await client.auth.checkVerification.mutate({ sessionId });
+    
+    if (result.status === 'verified') {
+      const { jwt, user } = result;
+      // Store JWT for future requests
+    }
+    ```
+  </Step>
+  
+  <Step title="Authenticated Requests">
+    Client includes JWT in the `Authorization` header for all subsequent requests.
+    
+    ```typescript
+    headers: {
+      authorization: `Bearer ${jwt}`
+    }
+    ```
+  </Step>
+</Steps>
+
+## JWT Token Format
+
+### Token Structure
+
+JWT tokens are signed using HS256 (HMAC-SHA256) with a secret key defined in `env.JWT_SECRET`. The payload contains:
+
+```typescript Token Payload (JwtUser)
+{
+  robloxUserId: string;      // Roblox user ID (numeric string)
+  name: string;              // Roblox display name
+  displayName: string;       // Roblox username
+  avatarUrl: string;         // Roblox avatar thumbnail URL
+}
+```
+
+### Token Expiration
+
+Tokens expire after **1 hour** (`JWT_EXPIRY = "1h"`).
+
+```typescript packages/api/src/routers/auth.ts:31
+const JWT_EXPIRY = "1h";
+```
+
+<Warning>
+  After 1 hour, clients must refresh their token using `auth.refresh` to maintain their session.
+</Warning>
+
+## Token Verification
+
+The server extracts and verifies JWT tokens in the context creation phase:
+
+<CodeGroup>
+```typescript packages/api/src/context.ts
+import jwt from 'jsonwebtoken';
+import { env } from './config/env';
+import { JwtUser } from './types';
+
+export async function createContext({
+  req,
+}: {
+  req: IncomingMessage;
+  res: ServerResponse;
+}) {
+  let user: JwtUser | null = null;
+
+  const authHeader = req.headers['authorization'];
+  const token =
+    authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
+      : undefined;
+
+  if (token) {
+    try {
+      const payload = jwt.verify(token, env.JWT_SECRET) as JwtUser;
+      user = payload;
+    } catch {}
+  }
+
+  return { user, headers: req.headers };
+}
+```
+
+```typescript Client Implementation
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:3000',
+      headers: () => {
+        const token = localStorage.getItem('jwt');
+        return {
+          authorization: token ? `Bearer ${token}` : '',
+        };
+      },
+    }),
+  ],
+});
+```
+</CodeGroup>
+
+## Token Refresh Mechanism
+
+When a token expires, clients can refresh it using the `auth.refresh` endpoint:
+
+```typescript Refresh Example
+try {
+  const { jwt, user } = await client.auth.refresh.mutate({ 
+    jwt: expiredToken 
+  });
+  
+  // Store new token
+  localStorage.setItem('jwt', jwt);
+  console.log('Token refreshed for', user.name);
+} catch (error) {
+  // Token is invalid or user doesn't exist
+  // Redirect to login
+}
+```
+
+<CodeGroup>
+```typescript Implementation (packages/api/src/routers/auth.ts:192)
+refresh: publicProcedure
+  .input(z.object({ jwt: z.string() }))
+  .mutation(async ({ input }) => {
+    let payload: unknown;
+    try {
+      payload = jwt.verify(input.jwt, env.JWT_SECRET, {
+        ignoreExpiration: true,  // Allow expired tokens
+      });
+    } catch {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Invalid session',
+      });
+    }
+
+    const { robloxUserId } = parsedPayload.data;
+    
+    // Fetch fresh user data from Roblox
+    const user = await fetchRobloxUserProfile(robloxUserId);
+    return buildSession(user);
+  })
+```
+
+```typescript Rate Limiting
+// Refresh is rate limited to prevent abuse
+const REFRESH_RATE_LIMIT_COUNT = 4;
+const REFRESH_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+// Maximum 4 refresh requests per hour per user
+```
+</CodeGroup>
+
+<Note>
+  The refresh endpoint accepts expired tokens (`ignoreExpiration: true`) but validates the signature and fetches fresh user data from Roblox.
+</Note>
+
+## Protected vs Public Procedures
+
+BloxChat defines three procedure types with different authentication requirements:
+
+### Public Procedures
+
+No authentication required:
+
+```typescript packages/api/src/trpc.ts:48
+export const publicProcedure = t.procedure;
+```
+
+**Examples:**
+- `auth.beginVerification` - Start verification flow
+- `auth.checkVerification` - Poll verification status
+- `auth.refresh` - Refresh expired token
+- `chat.limits` - Get channel rate limits
+
+### Protected Procedures
+
+Require valid JWT token:
+
+```typescript packages/api/src/trpc.ts:11-20
+export const isAuthed = middleware(async ({ ctx, next }) => {
+  if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user!,
+    },
+  });
+});
+
+export const protectedProcedure = t.procedure.use(isAuthed);
+```
+
+**Examples:**
+- `chat.publish` - Send chat message
+- Any endpoint requiring user identity
+
+### Game Verification Procedures
+
+Require verification secret header:
+
+```typescript packages/api/src/trpc.ts:22-36
+const hasVerificationSecret = middleware(async ({ ctx, next }) => {
+  const secretHeader = ctx.headers["x-verification-secret"];
+  const providedSecret = Array.isArray(secretHeader)
+    ? secretHeader[0]
+    : secretHeader;
+
+  if (!providedSecret || !isValidVerificationSecret(providedSecret)) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Invalid verification secret",
+    });
+  }
+
+  return next();
+});
+
+export const gameVerificationProcedure = t.procedure.use(hasVerificationSecret);
+```
+
+**Examples:**
+- `auth.completeVerification` - Complete verification from game server
+
+<Warning>
+  The verification secret uses timing-safe comparison (`crypto.timingSafeEqual`) to prevent timing attacks.
+</Warning>
+
+## Including JWT in Requests
+
+### HTTP Requests
+
+Include the token in the `Authorization` header:
+
+```http
+POST /chat.publish HTTP/1.1
+Host: localhost:3000
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+### tRPC Client Configuration
+
+<CodeGroup>
+```typescript React/Next.js
+import { httpBatchLink } from '@trpc/client';
+import { createTRPCReact } from '@trpc/react-query';
+
+export const trpc = createTRPCReact<AppRouter>();
+
+export const trpcClient = trpc.createClient({
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:3000',
+      headers: () => {
+        const token = localStorage.getItem('bloxchat-jwt');
+        return {
+          authorization: token ? `Bearer ${token}` : '',
+        };
+      },
+    }),
+  ],
+});
+```
+
+```typescript Node.js/Game Server
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: process.env.API_URL,
+      headers: {
+        'x-verification-secret': process.env.VERIFICATION_SECRET,
+      },
+    }),
+  ],
+});
+```
+</CodeGroup>
+
+## Security Considerations
+
+<AccordionGroup>
+  <Accordion title="Token Storage">
+    Store JWT tokens securely:
+    - **Web apps**: Use `localStorage` or `sessionStorage` (vulnerable to XSS)
+    - **Better**: Use HTTP-only cookies (not currently implemented)
+    - **Game servers**: Use environment variables for verification secret
+  </Accordion>
+  
+  <Accordion title="Secret Management">
+    ```typescript packages/api/src/trpc.ts:38-46
+    function isValidVerificationSecret(providedSecret: string) {
+      const expectedSecret = env.VERIFICATION_SECRET;
+      if (providedSecret.length !== expectedSecret.length) return false;
+
+      return crypto.timingSafeEqual(
+        Buffer.from(providedSecret),
+        Buffer.from(expectedSecret),
+      );
+    }
+    ```
+    
+    - Uses `crypto.timingSafeEqual` to prevent timing attacks
+    - Length check before comparison
+    - Never expose `VERIFICATION_SECRET` to clients
+  </Accordion>
+  
+  <Accordion title="Token Validation">
+    The context creation silently fails invalid tokens:
+    
+    ```typescript
+    if (token) {
+      try {
+        const payload = jwt.verify(token, env.JWT_SECRET) as JwtUser;
+        user = payload;
+      } catch {}
+    }
+    ```
+    
+    This allows public procedures to work without authentication while protected procedures can check `ctx.user`.
+  </Accordion>
+  
+  <Accordion title="Rate Limiting">
+    Authentication endpoints have strict rate limits:
+    - **Refresh**: 4 requests/hour per user
+    - **Game verification**: 20 requests/minute per user
+    - **Check verification**: 60 requests/minute per session
+    
+    See `packages/api/src/routers/auth.ts:32-37` for rate limit constants.
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+Common authentication errors:
+
+<CodeGroup>
+```typescript UNAUTHORIZED
+// Missing or invalid token
+{
+  code: 'UNAUTHORIZED',
+  message: 'Invalid session'
+}
+
+// Client should redirect to login
+```
+
+```typescript TOO_MANY_REQUESTS
+// Rate limit exceeded
+{
+  code: 'TOO_MANY_REQUESTS',
+  message: 'Rate limit hit. Try again in 30s.'
+}
+
+// Client should implement exponential backoff
+```
+
+```typescript BAD_REQUEST
+// Expired verification code
+{
+  code: 'BAD_REQUEST',
+  message: 'Verification code expired'
+}
+
+// Client should restart verification flow
+```
+</CodeGroup>
+
+## Complete Authentication Example
+
+Here's a full example of the authentication flow:
+
+```typescript Complete Flow
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '@bloxchat/api';
+
+// 1. Create client
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:3000',
+      headers: () => {
+        const jwt = localStorage.getItem('bloxchat-jwt');
+        return jwt ? { authorization: `Bearer ${jwt}` } : {};
+      },
+    }),
+  ],
+});
+
+// 2. Begin verification
+const { sessionId, code, placeId } = await client.auth.beginVerification.mutate();
+console.log(`Enter code ${code} in game (Place ID: ${placeId})`);
+
+// 3. Poll for completion
+let verified = false;
+while (!verified) {
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
+  
+  const result = await client.auth.checkVerification.mutate({ sessionId });
+  
+  if (result.status === 'verified') {
+    localStorage.setItem('bloxchat-jwt', result.jwt);
+    console.log('Logged in as', result.user.name);
+    verified = true;
+  } else if (result.status === 'expired') {
+    console.error('Verification expired, please restart');
+    break;
+  }
+}
+
+// 4. Make authenticated requests
+const message = await client.chat.publish.mutate({
+  content: 'Hello, BloxChat!',
+  channel: 'global',
+});
+
+// 5. Refresh token when needed (before expiration)
+setInterval(async () => {
+  try {
+    const jwt = localStorage.getItem('bloxchat-jwt');
+    if (!jwt) return;
+    
+    const { jwt: newJwt } = await client.auth.refresh.mutate({ jwt });
+    localStorage.setItem('bloxchat-jwt', newJwt);
+    console.log('Token refreshed');
+  } catch (error) {
+    console.error('Refresh failed, please re-login');
+    localStorage.removeItem('bloxchat-jwt');
+  }
+}, 50 * 60 * 1000); // Refresh every 50 minutes (before 1h expiration)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Auth Router" icon="shield" href="/api/auth/overview">
+    Explore all authentication endpoints
+  </Card>
+  <Card title="Chat Router" icon="message" href="/api/chat/overview">
+    Learn how to send and receive messages
+  </Card>
+  <Card title="API Introduction" icon="book" href="/api/introduction">
+    Back to API overview
+  </Card>
+</CardGroup>

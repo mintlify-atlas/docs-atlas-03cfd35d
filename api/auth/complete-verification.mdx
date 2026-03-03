@@ -1,0 +1,121 @@
+---
+title: "Complete Verification"
+description: "Complete authentication by submitting the verification code from within the Roblox game"
+---
+
+## Overview
+
+Completes the verification process by validating the code entered by a user in the Roblox game. This endpoint is called from the game server and verifies the user's identity.
+
+## Procedure Type
+
+**Mutation** - This endpoint modifies the verification session state.
+
+## Authentication
+
+This endpoint requires **game server authentication** via the `gameVerificationProcedure`. It can only be called from authorized Roblox game servers.
+
+## Input Parameters
+
+<ParamField path="code" type="string" required>
+  The verification code entered by the user in the Roblox game.
+  
+  **Validation:**
+  - Must be trimmed of whitespace
+  - Minimum length: 6 characters
+  - Maximum length: 12 characters
+</ParamField>
+
+<ParamField path="robloxUserId" type="string" required>
+  The Roblox user ID of the player completing verification.
+  
+  **Validation:**
+  - Must be a string containing only digits (e.g., "123456789")
+  - Pattern: `/^\d+$/`
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="ok" type="boolean" required>
+  Always returns `true` on success. The verification session is marked as completed and the JWT will be available via the `checkVerification` endpoint.
+</ResponseField>
+
+## Rate Limiting
+
+**Per User:**
+- **Limit:** 20 requests per user
+- **Window:** 60 seconds (1 minute)
+- **Key:** `robloxUserId`
+
+When rate limit is exceeded:
+- **Error Code:** `TOO_MANY_REQUESTS`
+- **Message:** `Rate limit hit. Try again in {seconds}s.`
+
+## Error Codes
+
+<ResponseField name="TOO_MANY_REQUESTS" type="error">
+  Rate limit exceeded for this user. Wait for the retry period to expire.
+  
+  **Message:** `Rate limit hit. Try again in {seconds}s.`
+</ResponseField>
+
+<ResponseField name="BAD_REQUEST" type="error">
+  Invalid or expired verification code.
+  
+  **Possible Messages:**
+  - `Invalid or expired verification code` - Code not found or session missing
+  - `Verification code expired` - Session has passed its expiration time
+</ResponseField>
+
+<ResponseField name="UNAUTHORIZED" type="error">
+  Failed to fetch Roblox user profile. The user ID may be invalid.
+  
+  **Message:** `Failed to fetch Roblox user profile`
+</ResponseField>
+
+<ResponseField name="INTERNAL_SERVER_ERROR" type="error">
+  Failed to retrieve user information from Roblox API.
+  
+  **Possible Messages:**
+  - `Failed to fetch Roblox user headshot`
+  - `Roblox user headshot not available`
+</ResponseField>
+
+## Example Usage
+
+```typescript
+// Called from Roblox game server
+import { trpc } from './trpc';
+
+try {
+  const result = await trpc.auth.completeVerification.mutate({
+    code: '123456',
+    robloxUserId: '987654321'
+  });
+  
+  if (result.ok) {
+    console.log('Verification completed successfully');
+    // User can now check verification status from web client
+  }
+} catch (error) {
+  if (error.code === 'TOO_MANY_REQUESTS') {
+    console.error('Rate limit exceeded:', error.message);
+  } else if (error.code === 'BAD_REQUEST') {
+    console.error('Invalid code:', error.message);
+  }
+}
+```
+
+## Use Cases
+
+- Verifying user identity from within a Roblox game
+- Linking Roblox accounts to web application sessions
+- Completing the authentication handshake initiated by `beginVerification`
+
+## Implementation Notes
+
+- This endpoint fetches the user's Roblox profile (username, display name, picture)
+- The verification code is removed from the active codes map after successful verification
+- The session remains active until expiration but the completed JWT is cached
+- Users must check their verification status using `checkVerification` to retrieve the JWT
+- Session expiration is checked before processing the verification

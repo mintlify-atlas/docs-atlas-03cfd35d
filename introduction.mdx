@@ -1,0 +1,143 @@
+---
+title: "Welcome to BloxChat"
+description: "A Windows desktop chat companion for Roblox games with real-time messaging and channel-based chat"
+---
+
+## What is BloxChat?
+
+BloxChat is a **Windows desktop chat companion** that brings real-time messaging to your Roblox gaming experience. It automatically routes chat by Roblox server (JobId), creating separate channels for each game instance you join.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get up and running in minutes with our step-by-step guide
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Detailed installation instructions and system requirements
+  </Card>
+  <Card
+    title="Guides"
+    icon="book"
+    href="/guides/using-the-app"
+  >
+    Learn how to use BloxChat features effectively
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api/introduction"
+  >
+    Explore the tRPC API for custom integrations
+  </Card>
+</CardGroup>
+
+## Key features
+
+<AccordionGroup>
+  <Accordion title="Automatic channel routing" icon="route">
+    BloxChat monitors your Roblox logs and automatically switches channels based on the JobId of the server you're in. Each Roblox game server gets its own isolated chat channel.
+  </Accordion>
+
+  <Accordion title="Roblox account verification" icon="shield-check">
+    Secure in-game verification system that links your desktop client to your Roblox account using short-lived sessions. No credentials are stored locally.
+  </Accordion>
+
+  <Accordion title="Reply threading" icon="reply">
+    Reply to specific messages to keep conversations organized. Thread your responses directly to any message in the channel.
+  </Accordion>
+
+  <Accordion title="Auto-focus and hotkeys" icon="keyboard">
+    Press `/` to quickly focus the chat input, and `Esc` to return focus to your Roblox game. Streamlined workflow for fast communication.
+  </Accordion>
+
+  <Accordion title="Auto-update system" icon="arrows-rotate">
+    Release builds on Windows automatically check for and install updates on startup when a newer version is available.
+  </Accordion>
+
+  <Accordion title="Customizable appearance" icon="sliders">
+    Configure GUI opacity, enable/disable image loading, set custom API URLs, customize your Roblox logs path, and set auto-join messages.
+  </Accordion>
+
+  <Accordion title="Discord Rich Presence" icon="discord">
+    Optional Discord integration to show your BloxChat activity status with configurable Discord RPC app ID.
+  </Accordion>
+
+  <Accordion title="Local commands" icon="terminal">
+    Use `/clear` to quickly clear your channel history locally.
+  </Accordion>
+</AccordionGroup>
+
+## Platform support
+
+BloxChat is currently **Windows-focused** (Windows 10/11):
+
+- Built with Tauri for native Windows performance
+- Uses Win32 integration in the Rust layer for system-level features
+- Requires WebView2 runtime (usually pre-installed on Windows 10/11)
+
+<Note>
+  Linux and macOS support is not currently available, but contributors are welcome to submit PRs adding cross-platform support.
+</Note>
+
+## How it works
+
+1. **Desktop app**: A React + Vite + Tauri application that provides the chat interface
+2. **Backend server**: A Bun + tRPC API that handles authentication and message routing
+3. **Log monitoring**: The desktop app watches your Roblox logs folder to detect server changes
+4. **Channel system**: Each Roblox JobId maps to a unique chat channel
+5. **Real-time messaging**: WebSocket subscriptions for instant message delivery
+
+## Architecture
+
+```
+apps/
+  desktop/   React + Vite + Tauri desktop app
+  server/    Bun server process that hosts the tRPC API
+packages/
+  api/       Shared tRPC routers, auth/chat logic, env config
+```
+
+## Use the official instance
+
+The easiest way to use BloxChat is with the official hosted instance:
+
+- **API Server**: `https://bloxchat.logix.lol`
+- **Download**: [Latest Release](https://github.com/logixism/bloxchat/releases/latest)
+
+Simply download the installer and start chatting. The app is pre-configured to use the official server.
+
+## Self-host your own instance
+
+For advanced users, you can host your own BloxChat server:
+
+<CardGroup cols={2}>
+  <Card title="Server setup" icon="server" href="/self-hosting/server-setup">
+    Set up your own Bun backend server
+  </Card>
+  <Card title="Game integration" icon="gamepad" href="/self-hosting/game-integration">
+    Integrate the verification system with your Roblox game
+  </Card>
+</CardGroup>
+
+## Getting help
+
+If you encounter issues or have questions:
+
+- Check the [Troubleshooting guide](/guides/troubleshooting)
+- Review [Configuration options](/guides/configuration)
+- Open an issue on [GitHub](https://github.com/logixism/bloxchat/issues)
+
+<Card
+  title="Ready to get started?"
+  icon="play"
+  href="/quickstart"
+>
+  Follow the quickstart guide to install BloxChat and start chatting in minutes.
+</Card>

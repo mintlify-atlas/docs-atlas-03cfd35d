@@ -1,0 +1,226 @@
+---
+title: "Subscribe to Messages"
+description: "Real-time subscription to receive chat messages from a specific channel"
+---
+
+## Overview
+
+The `subscribe` endpoint is a public subscription procedure that establishes a real-time WebSocket connection to receive chat messages from a specified channel. Messages are streamed as they are published.
+
+## Procedure Type
+
+**Subscription** - Public procedure (no authentication required)
+
+## Input Parameters
+
+<ParamField path="channel" type="string" required>
+  The channel identifier to subscribe to
+</ParamField>
+
+## Response Stream
+
+The subscription yields `ChatMessage` objects as they are published to the channel.
+
+### ChatMessage Structure
+
+<ResponseField name="id" type="string">
+  Unique identifier for the message (UUID v4)
+</ResponseField>
+
+<ResponseField name="author" type="JwtUser">
+  The user who sent the message
+  
+  <ResponseField name="author.robloxUserId" type="string">
+    User's Roblox user ID
+  </ResponseField>
+  
+  <ResponseField name="author.username" type="string">
+    User's Roblox username
+  </ResponseField>
+  
+  <ResponseField name="author.displayName" type="string">
+    User's Roblox display name
+  </ResponseField>
+  
+  <ResponseField name="author.picture" type="string">
+    URL to user's profile picture
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="content" type="string">
+  The message content
+</ResponseField>
+
+<ResponseField name="replyToId" type="string | null" optional>
+  Message ID this message is replying to, or `null` if not a reply
+</ResponseField>
+
+## WebSocket Connection
+
+The subscription uses tRPC's WebSocket transport to establish a persistent connection. Messages are pushed from the server to the client in real-time as they are published via the `globalPubSub` event emitter.
+
+## Example Usage
+
+### Basic Subscription
+
+```typescript
+import { trpc } from './trpc';
+
+// Subscribe to messages in a channel
+const subscription = trpc.chat.subscribe.subscribe(
+  { channel: 'global' },
+  {
+    onData: (message) => {
+      console.log(`New message from ${message.author.username}: ${message.content}`);
+      
+      if (message.replyToId) {
+        console.log(`  (replying to ${message.replyToId})`);
+      }
+    },
+    onError: (error) => {
+      console.error('Subscription error:', error);
+    },
+  }
+);
+
+// Later: unsubscribe to close the connection
+subscription.unsubscribe();
+```
+
+### React Hook Example
+
+```typescript
+import { useEffect, useState } from 'react';
+import { trpc } from './trpc';
+import type { ChatMessage } from '@bloxchat/api';
+
+function ChatRoom({ channel }: { channel: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    const subscription = trpc.chat.subscribe.subscribe(
+      { channel },
+      {
+        onData: (message) => {
+          setMessages((prev) => [...prev, message]);
+        },
+        onError: (error) => {
+          console.error('Chat subscription error:', error);
+        },
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [channel]);
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.author.displayName}:</strong> {msg.content}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Multiple Channel Subscriptions
+
+```typescript
+import { trpc } from './trpc';
+
+const channels = ['global', 'support', 'announcements'];
+
+const subscriptions = channels.map(channel => 
+  trpc.chat.subscribe.subscribe(
+    { channel },
+    {
+      onData: (message) => {
+        console.log(`[${channel}] ${message.author.username}: ${message.content}`);
+      },
+    }
+  )
+);
+
+// Cleanup all subscriptions
+const cleanup = () => {
+  subscriptions.forEach(sub => sub.unsubscribe());
+};
+```
+
+## Example Message Stream
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "author": {
+    "robloxUserId": "123456789",
+    "username": "johndoe",
+    "displayName": "John Doe",
+    "picture": "https://tr.rbxcdn.com/..."
+  },
+  "content": "Hello everyone!",
+  "replyToId": null
+}
+```
+
+```json
+{
+  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "author": {
+    "robloxUserId": "987654321",
+    "username": "janedoe",
+    "displayName": "Jane Doe",
+    "picture": "https://tr.rbxcdn.com/..."
+  },
+  "content": "Hi John!",
+  "replyToId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Implementation Details
+
+The subscribe endpoint is implemented at `chat.ts:70-78` as an async generator function:
+
+1. Creates an async iterable using `on(globalPubSub, input.channel)` (line 73)
+2. Iterates over events emitted to the specified channel (line 75)
+3. Yields each message as a `ChatMessage` type (line 76)
+
+The subscription remains active until:
+- The client calls `unsubscribe()`
+- The WebSocket connection is closed
+- The server shuts down
+
+## Connection Management
+
+### Automatic Reconnection
+
+Most tRPC clients support automatic reconnection when the WebSocket connection is lost. Configure this in your tRPC client setup:
+
+```typescript
+import { createTRPCProxyClient, createWSClient, wsLink } from '@trpc/client';
+
+const wsClient = createWSClient({
+  url: 'ws://localhost:3000/trpc',
+  retryDelayMs: () => 1000, // Retry after 1 second
+});
+
+const trpc = createTRPCProxyClient({
+  links: [wsLink({ client: wsClient })],
+});
+```
+
+### Memory Management
+
+Always clean up subscriptions when components unmount or when the subscription is no longer needed to prevent memory leaks.
+
+## Use Cases
+
+- Real-time chat interfaces
+- Live message feeds
+- Notification systems
+- Activity streams
+- Multi-channel chat applications

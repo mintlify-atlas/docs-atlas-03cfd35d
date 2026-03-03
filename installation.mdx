@@ -1,0 +1,324 @@
+---
+title: "Installation guide"
+description: "Complete installation instructions, system requirements, and troubleshooting for BloxChat"
+---
+
+## System requirements
+
+Before installing BloxChat, ensure your system meets these requirements:
+
+<AccordionGroup>
+  <Accordion title="Operating system" icon="windows">
+    - **Windows 10** (version 1809 or later) or **Windows 11**
+    - 64-bit (x64) architecture required
+    - Administrator privileges for installation
+    
+    <Note>
+      BloxChat is currently Windows-only. Linux and macOS are not supported, though community contributions for these platforms are welcome.
+    </Note>
+  </Accordion>
+
+  <Accordion title="WebView2 runtime" icon="browser">
+    - **Microsoft Edge WebView2** runtime (usually pre-installed on Windows 10/11)
+    - The installer will automatically install WebView2 if not present
+    - Alternatively, download from [Microsoft's WebView2 page](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+  </Accordion>
+
+  <Accordion title="Roblox client" icon="gamepad">
+    - **Roblox Player** must be installed from [roblox.com](https://www.roblox.com/)
+    - BloxChat reads from the Roblox logs folder: `%LOCALAPPDATA%\Roblox\logs`
+    - Ensure Roblox has write permissions to its logs directory
+  </Accordion>
+
+  <Accordion title="Network requirements" icon="wifi">
+    - Active internet connection required
+    - Outbound HTTPS access to the API server (default: `https://bloxchat.logix.lol`)
+    - WebSocket support (typically works through most firewalls)
+  </Accordion>
+
+  <Accordion title="Hardware requirements" icon="microchip">
+    - **Minimum**: Any modern Windows PC from the last 5-7 years
+    - **RAM**: 100-200 MB typical usage
+    - **Storage**: ~150 MB for installation
+    - **Display**: Works at any resolution (optimized for 1920×1080 and above)
+  </Accordion>
+</AccordionGroup>
+
+## Installation steps
+
+<Steps>
+  <Step title="Download the installer">
+    
+    Visit the [GitHub Releases page](https://github.com/logixism/bloxchat/releases/latest) and download the latest `.msi` installer.
+
+    The file will be named something like:
+    ```
+    BloxChat_1.9.1_x64_en-US.msi
+    ```
+
+    <Tip>
+      Look for the **Assets** section at the bottom of the release notes to find the installer.
+    </Tip>
+
+  </Step>
+
+  <Step title="Run the installer">
+    
+    1. **Double-click** the downloaded `.msi` file
+    2. Windows may show a **SmartScreen warning** (this is normal for newly signed applications)
+       - Click **More info**
+       - Click **Run anyway**
+    3. The **Windows Installer** wizard will open
+    4. Click **Next** to proceed through the installation
+    5. Choose your installation location (default is recommended)
+    6. Click **Install**
+
+    <Warning>
+      You'll need **administrator privileges** to install BloxChat. If prompted by User Account Control (UAC), click **Yes**.
+    </Warning>
+
+    The installer will:
+    - Extract application files to `Program Files/BloxChat`
+    - Install WebView2 runtime if not present
+    - Create Start Menu shortcuts
+    - Add an uninstaller to Windows Settings
+
+  </Step>
+
+  <Step title="Launch BloxChat">
+    
+    After installation completes:
+
+    1. Find **BloxChat** in your Start Menu
+    2. Or double-click the desktop shortcut if you selected that option
+    3. The app will open with the login screen
+
+    On first launch, Windows Defender Firewall may ask for network permissions:
+    - Check **Private networks** (recommended)
+    - Click **Allow access**
+
+  </Step>
+
+  <Step title="Complete first-time setup">
+    
+    ### Verify your Roblox account
+
+    1. Click **Start Verification** on the login screen
+    2. Note the 6-character code displayed (e.g., `ABC123`)
+    3. Click **Join verification game**
+    4. Submit the code in the verification game
+    5. Return to BloxChat — you'll be logged in automatically
+
+    <Info>
+      The verification code expires in **90 seconds**. If it expires, simply restart the verification process.
+    </Info>
+
+    ### Configure Roblox logs path (if needed)
+
+    BloxChat should automatically detect your Roblox logs. If not:
+
+    1. Click **Settings** (gear icon)
+    2. Find **Roblox Logs Folder**
+    3. The default path should be displayed
+    4. If empty, click **Use default Path**
+    5. Click **Save Settings**
+
+    The default path is:
+    ```
+    C:\Users\[YourUsername]\AppData\Local\Roblox\logs
+    ```
+
+  </Step>
+</Steps>
+
+## Verifying installation
+
+To confirm BloxChat is properly installed:
+
+<Tabs>
+  <Tab title="Check app version">
+    1. Open **BloxChat**
+    2. Go to **Settings**
+    3. Scroll to **About** section
+    4. Verify **App Version** shows the correct version number
+  </Tab>
+  
+  <Tab title="Test connectivity">
+    1. Open **BloxChat**
+    2. Complete the Roblox verification
+    3. Join any Roblox game
+    4. Check if BloxChat switches to that game's channel
+    5. Try sending a test message
+  </Tab>
+  
+  <Tab title="Check auto-update">
+    1. BloxChat checks for updates on startup
+    2. If an update is available, you'll see: "Update ready: v[version]"
+    3. Restart the app to apply the update
+    4. This confirms the auto-update system is working
+  </Tab>
+</Tabs>
+
+## Installation locations
+
+BloxChat installs files to these locations:
+
+<CodeGroup>
+```plaintext Application Files
+C:\Program Files\BloxChat\
+├── BloxChat.exe           # Main executable
+├── resources/             # App resources
+└── uninstall.exe          # Uninstaller
+```
+
+```plaintext User Data
+C:\Users\[Username]\AppData\Roaming\com.bloxchat.app\
+└── store.json             # User settings and session data
+```
+
+```plaintext Roblox Logs (monitored)
+C:\Users\[Username]\AppData\Local\Roblox\logs\
+└── *.log                  # Roblox log files (read-only access)
+```
+</CodeGroup>
+
+## Troubleshooting installation issues
+
+<AccordionGroup>
+  <Accordion title="Installer won't run" icon="circle-exclamation">
+    **Symptoms**: Double-clicking the `.msi` does nothing, or shows an error.
+    
+    **Solutions**:
+    - Right-click the `.msi` → **Run as administrator**
+    - Ensure Windows Installer service is running:
+      1. Press `Win+R`, type `services.msc`, press Enter
+      2. Find **Windows Installer**
+      3. Ensure it's set to **Manual** or **Automatic**
+    - Download the installer again (file may be corrupted)
+    - Disable antivirus temporarily during installation
+  </Accordion>
+
+  <Accordion title="SmartScreen blocks installation" icon="shield">
+    **Symptoms**: Windows shows "Windows protected your PC" message.
+    
+    **Solutions**:
+    - Click **More info**
+    - Click **Run anyway**
+    - This is normal for applications not widely downloaded yet
+    - BloxChat is open-source and safe to run
+  </Accordion>
+
+  <Accordion title="WebView2 installation fails" icon="browser">
+    **Symptoms**: Error message about missing WebView2 runtime.
+    
+    **Solutions**:
+    - Download WebView2 manually: [Microsoft WebView2 Download](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+    - Install the "Evergreen Standalone Installer"
+    - Restart your computer
+    - Run the BloxChat installer again
+  </Accordion>
+
+  <Accordion title="App won't launch after installation" icon="circle-xmark">
+    **Symptoms**: BloxChat closes immediately or shows a blank window.
+    
+    **Solutions**:
+    - Check Windows Event Viewer for error details:
+      1. Press `Win+R`, type `eventvwr.msc`, press Enter
+      2. Go to **Windows Logs** → **Application**
+      3. Look for errors from "BloxChat"
+    - Ensure WebView2 is installed: Check `edge://settings/help` in Microsoft Edge
+    - Verify you're running Windows 10 version 1809 or later
+    - Try reinstalling the application
+  </Accordion>
+
+  <Accordion title="Can't connect to API server" icon="wifi">
+    **Symptoms**: "Cannot connect to server" error after installation.
+    
+    **Solutions**:
+    - Check your internet connection
+    - Verify firewall isn't blocking BloxChat:
+      1. Windows Settings → **Privacy & Security** → **Firewall**
+      2. **Allow an app through firewall**
+      3. Ensure BloxChat is checked for **Private networks**
+    - Try disabling VPN temporarily
+    - In **Settings**, verify **API Server URL** is: `https://bloxchat.logix.lol`
+  </Accordion>
+
+  <Accordion title="Logs path not detected" icon="folder-open">
+    **Symptoms**: BloxChat doesn't switch channels when joining games.
+    
+    **Solutions**:
+    - Open **Settings** → **Roblox Logs Folder**
+    - Click **Use default Path**
+    - Manually verify the path exists:
+      1. Press `Win+R`
+      2. Type: `%LOCALAPPDATA%\Roblox\logs`
+      3. Press Enter — folder should open
+    - If folder doesn't exist, run Roblox at least once to create it
+    - Click **Save Settings** in BloxChat after correcting the path
+  </Accordion>
+</AccordionGroup>
+
+## Uninstalling BloxChat
+
+If you need to remove BloxChat:
+
+<Steps>
+  <Step title="Using Windows Settings">
+    1. Open **Windows Settings** (`Win+I`)
+    2. Go to **Apps** → **Installed apps**
+    3. Search for **BloxChat**
+    4. Click the three dots → **Uninstall**
+    5. Confirm the uninstallation
+  </Step>
+  
+  <Step title="Clean up user data (optional)">
+    To remove all settings and session data:
+    
+    1. Press `Win+R`
+    2. Type: `%APPDATA%\com.bloxchat.app`
+    3. Press Enter
+    4. Delete the folder
+    
+    <Note>
+      This will remove your saved settings, including API URL, logs path, and opacity preferences.
+    </Note>
+  </Step>
+</Steps>
+
+## Updating BloxChat
+
+**Automatic updates** (recommended):
+- BloxChat checks for updates on every launch
+- When an update is available, it downloads automatically
+- You'll see: "Update ready: v[version]"
+- Restart the app to complete the update
+
+**Manual updates**:
+1. Download the latest installer from [Releases](https://github.com/logixism/bloxchat/releases/latest)
+2. Run the new installer (it will upgrade in-place)
+3. Launch BloxChat
+
+<Warning>
+  Don't uninstall before updating — the new installer will upgrade your existing installation while preserving your settings.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart guide" icon="rocket" href="/quickstart">
+    Complete the first-time setup and start chatting
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Customize BloxChat settings for your workflow
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Solve common issues and error messages
+  </Card>
+  
+  <Card title="Verification flow" icon="shield-check" href="/guides/verification-flow">
+    Understand how Roblox account verification works
+  </Card>
+</CardGroup>

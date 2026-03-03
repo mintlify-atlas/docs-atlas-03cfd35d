@@ -1,0 +1,75 @@
+---
+title: "Get Chat Limits"
+description: "Retrieve chat limits configuration for a specific channel"
+---
+
+## Overview
+
+The `limits` endpoint is a public query procedure that retrieves chat configuration limits for a specific channel. These limits control message length and rate limiting behavior.
+
+## Procedure Type
+
+**Query** - Public procedure (no authentication required)
+
+## Input Parameters
+
+<ParamField path="channel" type="string" required>
+  The channel identifier to retrieve limits for
+</ParamField>
+
+## Response Structure
+
+<ResponseField name="maxMessageLength" type="number">
+  Maximum allowed length for chat messages in this channel
+</ResponseField>
+
+<ResponseField name="rateLimitCount" type="number">
+  Number of messages allowed within the rate limit window
+</ResponseField>
+
+<ResponseField name="rateLimitWindowMs" type="number">
+  Time window for rate limiting in milliseconds
+</ResponseField>
+
+## Channel-Specific Overrides
+
+Limits can be configured per-channel using the `CHAT_LIMITS_OVERRIDES` environment variable. If no override exists for the requested channel, default limits from the following environment variables are returned:
+
+- `CHAT_DEFAULT_MAX_MESSAGE_LENGTH`
+- `CHAT_DEFAULT_RATE_LIMIT_COUNT`
+- `CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS`
+
+## Example Usage
+
+```typescript
+import { trpc } from './trpc';
+
+// Get limits for a specific channel
+const limits = await trpc.chat.limits.query({ 
+  channel: 'global' 
+});
+
+console.log(`Max message length: ${limits.maxMessageLength}`);
+console.log(`Rate limit: ${limits.rateLimitCount} messages per ${limits.rateLimitWindowMs}ms`);
+```
+
+## Example Response
+
+```json
+{
+  "maxMessageLength": 500,
+  "rateLimitCount": 5,
+  "rateLimitWindowMs": 10000
+}
+```
+
+## Implementation Details
+
+The limits endpoint is implemented at `chat.ts:13-17` and uses the `getChatLimitsForChannel` function from `chatLimits.ts:33-48` to retrieve channel-specific configuration.
+
+## Use Cases
+
+- Validate message length client-side before sending
+- Display rate limit information to users
+- Adjust UI behavior based on channel-specific limits
+- Configure chat input components with appropriate constraints

@@ -1,0 +1,146 @@
+---
+title: "Check Verification"
+description: "Poll the status of a verification session and retrieve the JWT when complete"
+---
+
+## Overview
+
+Checks the current status of a verification session. Used by web clients to poll for completion after displaying a verification code to the user.
+
+## Procedure Type
+
+**Mutation** - Despite being a status check, this uses mutation to implement rate limiting.
+
+## Input Parameters
+
+<ParamField path="sessionId" type="string" required>
+  The unique session identifier returned by `beginVerification`.
+  
+  **Validation:**
+  - Must be a valid UUID format
+</ParamField>
+
+## Response Fields
+
+The response structure varies based on the verification status:
+
+### Status: "expired"
+
+Returned when the verification session no longer exists or has expired.
+
+<ResponseField name="status" type="string" required>
+  Value: `"expired"`
+</ResponseField>
+
+### Status: "pending"
+
+Returned when the session is still active but verification has not been completed.
+
+<ResponseField name="status" type="string" required>
+  Value: `"pending"`
+</ResponseField>
+
+<ResponseField name="expiresAt" type="number" required>
+  Unix timestamp (in milliseconds) when this session will expire.
+</ResponseField>
+
+<ResponseField name="code" type="string" required>
+  The verification code that should be entered in the Roblox game.
+</ResponseField>
+
+### Status: "verified"
+
+Returned when verification has been successfully completed.
+
+<ResponseField name="status" type="string" required>
+  Value: `"verified"`
+</ResponseField>
+
+<ResponseField name="jwt" type="string" required>
+  JSON Web Token for authenticated API requests. Valid for 1 hour.
+</ResponseField>
+
+<ResponseField name="user" type="JwtUser" required>
+  Authenticated user information.
+  
+  **JwtUser fields:**
+  - `robloxUserId` (string): The user's Roblox user ID
+  - `username` (string): The user's Roblox username
+  - `displayName` (string): The user's Roblox display name
+  - `picture` (string): URL to the user's Roblox avatar headshot (420x420 PNG)
+</ResponseField>
+
+## Rate Limiting
+
+**Per Session:**
+- **Limit:** 60 requests per session
+- **Window:** 60 seconds (1 minute)
+- **Key:** `sessionId`
+
+When rate limit is exceeded:
+- **Error Code:** `TOO_MANY_REQUESTS`
+- **Message:** `Rate limit hit. Try again in {seconds}s.`
+
+## Error Codes
+
+<ResponseField name="TOO_MANY_REQUESTS" type="error">
+  Rate limit exceeded for this session. Reduce polling frequency.
+  
+  **Message:** `Rate limit hit. Try again in {seconds}s.`
+</ResponseField>
+
+## Example Usage
+
+```typescript
+import { trpc } from './trpc';
+
+// Start verification
+const session = await trpc.auth.beginVerification.mutate();
+
+// Display code to user
+console.log('Enter this code in Roblox:', session.code);
+
+// Poll for completion
+const pollInterval = setInterval(async () => {
+  try {
+    const status = await trpc.auth.checkVerification.mutate({
+      sessionId: session.sessionId
+    });
+    
+    if (status.status === 'verified') {
+      clearInterval(pollInterval);
+      console.log('Authenticated as:', status.user.username);
+      console.log('JWT:', status.jwt);
+      // Store JWT for future requests
+      localStorage.setItem('authToken', status.jwt);
+    } else if (status.status === 'expired') {
+      clearInterval(pollInterval);
+      console.log('Verification expired, please try again');
+    } else if (status.status === 'pending') {
+      console.log('Waiting for user to enter code...');
+      console.log('Expires at:', new Date(status.expiresAt));
+    }
+  } catch (error) {
+    if (error.code === 'TOO_MANY_REQUESTS') {
+      // Slow down polling
+      clearInterval(pollInterval);
+      setTimeout(() => pollInterval, 2000);
+    }
+  }
+}, 1000); // Poll every second
+```
+
+## Use Cases
+
+- Polling for verification completion in web applications
+- Checking if a verification code has been entered
+- Retrieving the JWT token after successful verification
+- Monitoring session expiration
+
+## Implementation Notes
+
+- Poll at reasonable intervals (1-2 seconds recommended) to respect rate limits
+- The JWT expires after 1 hour and must be refreshed using the `refresh` endpoint
+- Expired sessions are automatically cleaned up before checking status
+- Rate limiting is per-session, so each verification flow has its own quota
+- Once status is "verified", the session data persists until expiration

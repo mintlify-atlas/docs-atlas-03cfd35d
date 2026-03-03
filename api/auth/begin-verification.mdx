@@ -1,0 +1,69 @@
+---
+title: "Begin Verification"
+description: "Start a new authentication verification session"
+---
+
+## Overview
+
+Initiates a new verification session and generates a unique verification code that users must enter in the Roblox game to authenticate.
+
+## Procedure Type
+
+**Mutation** - This endpoint creates a new verification session.
+
+## Input Parameters
+
+This endpoint takes no input parameters.
+
+## Response Fields
+
+<ResponseField name="sessionId" type="string" required>
+  Unique UUID identifier for this verification session. Used to poll verification status.
+</ResponseField>
+
+<ResponseField name="code" type="string" required>
+  6-digit verification code that the user must enter in the Roblox game. Can be alphanumeric if collisions occur.
+</ResponseField>
+
+<ResponseField name="expiresAt" type="number" required>
+  Unix timestamp (in milliseconds) when this verification session expires. Sessions are valid for 10 minutes.
+</ResponseField>
+
+<ResponseField name="placeId" type="string" required>
+  Roblox place ID where users should enter the verification code.
+</ResponseField>
+
+## Rate Limiting
+
+This endpoint has no rate limiting applied.
+
+## Error Codes
+
+This endpoint does not return any specific error codes under normal operation.
+
+## Example Usage
+
+```typescript
+import { trpc } from './trpc';
+
+const session = await trpc.auth.beginVerification.mutate();
+
+console.log('Verification Code:', session.code);
+console.log('Session ID:', session.sessionId);
+console.log('Enter code at Roblox Place:', session.placeId);
+console.log('Expires:', new Date(session.expiresAt));
+```
+
+## Use Cases
+
+- Starting the authentication flow for new users
+- Generating a verification code to display in your web application
+- Initiating re-authentication when a session expires
+
+## Implementation Notes
+
+- Verification codes are typically 6 digits (100000-999999)
+- If code collisions occur after 10 attempts, an 8-character hex code is generated
+- Sessions automatically expire after 10 minutes (600,000ms)
+- Expired sessions are cleaned up automatically before new sessions are created
+- The verification code must be entered in the configured Roblox place

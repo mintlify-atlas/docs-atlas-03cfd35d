@@ -1,0 +1,412 @@
+---
+title: Configuration
+description: Customize BloxChat settings to match your preferences and workflow
+---
+
+BloxChat provides extensive configuration options to personalize your experience. Access all settings by clicking the settings icon in the application menu.
+
+## Connection Settings
+
+Configure how BloxChat connects to the backend API server.
+
+### API Server URL
+
+The API Server URL determines which backend BloxChat connects to for authentication and chat services.
+
+<Tabs>
+  <Tab title="Hosted Server (Default)">
+    **Default URL**: `https://bloxchat.logix.lol`
+    
+    This is the official hosted backend for BloxChat. Most users should use this default configuration.
+    
+    <Note>
+      The default server is maintained by the BloxChat team and includes automatic updates and support.
+    </Note>
+  </Tab>
+  
+  <Tab title="Local Development">
+    **Local URL**: `http://localhost:3000`
+    
+    For developers running the backend locally:
+    
+    1. Open **Settings**
+    2. Set **API Server URL** to `http://localhost:3000`
+    3. Click **Save Settings**
+    4. BloxChat will reload with the new configuration
+    
+    <Warning>
+      You must include `http://` explicitly for local development. Using `localhost:3000` without the protocol will fail.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Self-Hosted">
+    If you're running your own BloxChat backend:
+    
+    1. Deploy the backend server (see [Server Setup](/self-hosting/server-setup))
+    2. Note your server's URL (e.g., `https://chat.yourdomain.com`)
+    3. Open **Settings** in BloxChat
+    4. Enter your server URL in **API Server URL**
+    5. Click **Save Settings**
+    
+    <Tip>
+      Self-hosted servers require proper SSL certificates for HTTPS. Local development can use HTTP.
+    </Tip>
+  </Tab>
+</Tabs>
+
+### Reset to Default
+
+If you've changed the API Server URL and want to return to the default:
+
+1. Open **Settings**
+2. Click **Reset to default host** under the API Server URL field
+3. Click **Save Settings**
+
+<Note>
+  Changing the API Server URL reloads the application. You'll need to verify your Roblox account again if switching to a different server.
+</Note>
+
+## Roblox Integration
+
+Configure how BloxChat interacts with your Roblox installation.
+
+### Roblox Logs Folder
+
+BloxChat monitors your Roblox logs folder to detect when you join games and identify server JobIds for channel routing.
+
+<Tabs>
+  <Tab title="Automatic Detection">
+    BloxChat automatically detects your Roblox logs folder on Windows:
+    
+    **Default path**: `C:\Users\YourUsername\AppData\Local\Roblox\logs`
+    
+    In most cases, you don't need to configure this manually.
+  </Tab>
+  
+  <Tab title="Custom Path">
+    If Roblox is installed in a non-standard location:
+    
+    1. Locate your Roblox logs folder
+    2. Open **Settings** in BloxChat
+    3. Enter the full path in **Roblox Logs Folder**
+    4. Click **Save Settings**
+    
+    Example custom paths:
+    - `D:\Games\Roblox\logs`
+    - `C:\Program Files\Roblox\logs`
+  </Tab>
+  
+  <Tab title="Reset to Default">
+    To restore automatic detection:
+    
+    1. Open **Settings**
+    2. Click **Use default Path** under Roblox Logs Folder
+    3. Click **Save Settings**
+  </Tab>
+</Tabs>
+
+<Warning>
+  BloxChat cannot detect server changes if the logs folder path is incorrect. If channel switching isn't working, verify this setting first.
+</Warning>
+
+### Account Information
+
+The **Signed in as** section shows your current Roblox account:
+
+- **Display Name**: Your Roblox display name
+- **Username**: Your Roblox username (with `@` prefix)
+
+<Accordion title="How to log out">
+  1. Open **Settings**
+  2. Scroll to **Roblox Integration**
+  3. Click **Log out**
+  4. Confirm the action
+  5. You'll be redirected to the login screen
+  
+  <Note>
+    Logging out clears your local session. You'll need to complete verification again to log back in.
+  </Note>
+</Accordion>
+
+## Privacy & Media
+
+Control how BloxChat handles external content to protect your privacy.
+
+### External Image Loading
+
+When enabled, BloxChat loads and displays images and videos shared in chat.
+
+<Tabs>
+  <Tab title="Enabled (Default)">
+    **What happens:**
+    - Images and videos are loaded and displayed inline
+    - Media is fetched directly from external URLs
+    - Provides a richer chat experience
+    
+    <Warning>
+      Loading external images can reveal your IP address to the server hosting the image. Consider disabling this if privacy is a concern.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Disabled">
+    **What happens:**
+    - Only URLs are shown (no inline previews)
+    - You must click URLs to open them externally
+    - Protects your IP address from external servers
+    
+    <Tip>
+      Even with image loading disabled, you can still share URLs. Other users with image loading enabled will see the media.
+    </Tip>
+  </Tab>
+</Tabs>
+
+**To toggle image loading:**
+
+1. Open **Settings**
+2. Scroll to **Privacy & Media**
+3. Check or uncheck **Load external images inside chat**
+4. Click **Save Settings**
+
+## Appearance
+
+Customize the visual appearance of the BloxChat window.
+
+### GUI Opacity
+
+Adjust the transparency of the BloxChat window background.
+
+<Steps>
+  <Step title="Open Settings">
+    Click the settings icon in the BloxChat menu.
+  </Step>
+  
+  <Step title="Find GUI Opacity">
+    Scroll to the **Appearance** section.
+  </Step>
+  
+  <Step title="Adjust the slider">
+    Drag the **GUI Opacity** slider to your desired transparency level:
+    - **100%**: Fully opaque (default)
+    - **50%**: Semi-transparent
+    - **20%**: Highly transparent (minimum)
+  </Step>
+  
+  <Step title="Preview in real-time">
+    The opacity changes are visible immediately as you adjust the slider.
+  </Step>
+  
+  <Step title="Save your changes">
+    Click **Save Settings** to persist your opacity preference.
+  </Step>
+</Steps>
+
+<Tip>
+  Lower opacity values (60-80%) are ideal if you want BloxChat to overlay your game window without blocking important UI elements.
+</Tip>
+
+**Use cases for different opacity levels:**
+
+- **100%**: Best for reading chat in a separate window
+- **80%**: Good balance between visibility and see-through
+- **60%**: Subtle overlay that doesn't obstruct gameplay
+- **40%**: Minimal distraction, harder to read
+- **20%**: Nearly invisible, only for experienced users
+
+## Automation
+
+Configure automatic actions triggered during gameplay.
+
+### Auto Join Message
+
+Set a message to be sent automatically when you join a new Roblox server (when your JobId changes).
+
+**Configuration:**
+
+1. Open **Settings**
+2. Scroll to **Automation**
+3. Enter your message in **Auto Join Message**
+4. Click **Save Settings**
+
+**Example messages:**
+
+<CodeGroup>
+```text Simple
+joined the channel
+```
+
+```text Friendly
+hey everyone! 👋
+```
+
+```text Custom
+ready to play!
+```
+
+```text Emoji Only
+🎮
+```
+</CodeGroup>
+
+<Note>
+  Leave the field empty to disable auto-join messages.
+</Note>
+
+**When the message is sent:**
+
+- When you join a Roblox game (new JobId detected)
+- When you switch to a different server in the same game
+- When you reconnect after a disconnect
+
+<Warning>
+  Auto-join messages count toward rate limits. Rapidly switching servers may trigger rate limiting.
+</Warning>
+
+## Integrations
+
+Connect BloxChat with third-party services.
+
+### Discord Rich Presence
+
+Display your BloxChat activity on your Discord profile.
+
+<Steps>
+  <Step title="Create a Discord Application">
+    1. Visit [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Click **New Application**
+    3. Name your application (e.g., "BloxChat")
+    4. Copy the **Application ID** from the application's main page
+  </Step>
+  
+  <Step title="Configure in BloxChat">
+    1. Open **Settings** in BloxChat
+    2. Scroll to **Integrations**
+    3. Paste your Application ID in **Discord RPC App ID**
+    4. Click **Save Settings**
+  </Step>
+  
+  <Step title="Restart BloxChat">
+    Close and reopen BloxChat to activate Discord Rich Presence.
+  </Step>
+</Steps>
+
+**What Discord Rich Presence shows:**
+
+- Your current activity in BloxChat
+- The game/channel you're in
+- How long you've been active
+
+**To disable Discord Rich Presence:**
+
+1. Open **Settings**
+2. Set **Discord RPC App ID** to `-1`
+3. Click **Save Settings**
+
+<Tip>
+  You can customize the Rich Presence display by configuring your Discord application settings in the Developer Portal.
+</Tip>
+
+## Saving and Canceling Changes
+
+BloxChat tracks unsaved changes and prevents accidental data loss.
+
+### Save Settings
+
+<Tabs>
+  <Tab title="Save Changes">
+    When you've modified any setting:
+    
+    1. The message "You have unsaved changes" appears at the bottom
+    2. The **Save Settings** button becomes active
+    3. Click **Save Settings** to persist all changes
+    
+    <Note>
+      Some settings (like API Server URL) cause BloxChat to reload automatically after saving.
+    </Note>
+  </Tab>
+  
+  <Tab title="Cancel Changes">
+    To discard unsaved changes:
+    
+    1. Click **Cancel** at the bottom of the Settings page
+    2. You'll return to the main chat view
+    3. All unsaved changes are discarded
+    
+    <Warning>
+      There is no confirmation dialog. Clicking Cancel immediately discards changes.
+    </Warning>
+  </Tab>
+</Tabs>
+
+### Change Indicators
+
+The status message at the bottom shows:
+
+- **"All changes saved"**: No unsaved modifications
+- **"You have unsaved changes"**: You've modified settings but haven't saved
+
+## About
+
+View information about your BloxChat installation.
+
+### App Version
+
+The **About** section displays your current BloxChat version number.
+
+**Why this matters:**
+
+- Helps identify if you're running the latest version
+- Required information when reporting bugs
+- Used to determine update availability
+
+<Tip>
+  BloxChat automatically checks for updates on startup. If a new version is available, you'll see a notification prompting you to update.
+</Tip>
+
+## Settings Best Practices
+
+<AccordionGroup>
+  <Accordion title="For casual users">
+    **Recommended settings:**
+    - Keep default API Server URL
+    - Enable external image loading
+    - Set GUI opacity to 100% or 80%
+    - Configure a friendly auto-join message
+    - Enable Discord Rich Presence if you use Discord
+  </Accordion>
+  
+  <Accordion title="For privacy-focused users">
+    **Recommended settings:**
+    - Disable external image loading
+    - Disable Discord Rich Presence (set to `-1`)
+    - Disable or use minimal auto-join messages
+    - Review logs folder path to ensure data stays local
+  </Accordion>
+  
+  <Accordion title="For developers">
+    **Recommended settings:**
+    - Point API Server URL to `http://localhost:3000`
+    - Keep image loading enabled for testing
+    - Verify Roblox logs path for accurate JobId detection
+    - Use auto-join messages for debugging
+  </Accordion>
+  
+  <Accordion title="For overlay users">
+    **Recommended settings:**
+    - Set GUI opacity between 60-80%
+    - Enable external image loading for full experience
+    - Position BloxChat window over game UI
+    - Use keyboard shortcuts (`/` and `Esc`) for quick access
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Using the App" icon="comments" href="/guides/using-the-app">
+    Learn how to use BloxChat features effectively
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Fix common configuration issues
+  </Card>
+</CardGroup>

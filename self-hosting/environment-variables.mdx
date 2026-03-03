@@ -1,0 +1,454 @@
+---
+title: Environment Variables
+description: Complete reference for all BloxChat backend configuration options
+---
+
+## Configuration File
+
+All environment variables are stored in `apps/server/.env` and validated by `packages/api/src/config/env.ts`.
+
+<Warning>
+  The server will exit with validation errors if required variables are missing or invalid.
+</Warning>
+
+## Required Variables
+
+These variables **must** be set for the server to start.
+
+<ParamField path="JWT_SECRET" type="string" required>
+  Secret key used to sign JWT authentication tokens.
+  
+  **Validation:**
+  - Minimum length: 32 characters
+  - Maximum length: 64 characters
+  
+  **Usage:**
+  - Signs JWT tokens when users complete verification
+  - Verifies tokens on protected endpoints
+  - Tokens expire after 1 hour (configurable in `packages/api/src/routers/auth.ts`)
+  
+  **Example:**
+  ```env
+  JWT_SECRET=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4
+  ```
+  
+  **Generate:**
+  ```bash
+  openssl rand -base64 48
+  ```
+</ParamField>
+
+<ParamField path="VERIFICATION_SECRET" type="string" required>
+  Shared secret between backend and Roblox game for verification flow.
+  
+  **Validation:**
+  - Minimum length: 64 characters
+  
+  **Security:**
+  - Must be stored securely in both backend `.env` and Roblox game
+  - Never expose to clients or logs
+  - Sent in `x-verification-secret` header from game server scripts
+  - Uses timing-safe comparison to prevent timing attacks
+  
+  **Usage:**
+  The Roblox game calls `completeVerification` with this secret to prove authenticity:
+  ```lua Roblox Server Script
+  local HttpService = game:GetService("HttpService")
+  local VERIFICATION_SECRET = "your_secret_here"
+  
+  local response = HttpService:RequestAsync({
+    Url = "https://your-api.com/trpc/auth.completeVerification",
+    Method = "POST",
+    Headers = {
+      ["Content-Type"] = "application/json",
+      ["x-verification-secret"] = VERIFICATION_SECRET
+    },
+    Body = HttpService:JSONEncode({
+      code = verificationCode,
+      robloxUserId = tostring(player.UserId)
+    })
+  })
+  ```
+  
+  **Example:**
+  ```env
+  VERIFICATION_SECRET=x9y8z7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4z3y2x1w0v9u8t7s6r5q4p3o2n1m0
+  ```
+  
+  **Generate:**
+  ```bash
+  openssl rand -base64 64
+  ```
+</ParamField>
+
+<ParamField path="VERIFICATION_PLACE_ID" type="string" required>
+  The Roblox place ID where users complete verification.
+  
+  **Validation:**
+  - Must be numeric (regex: `^\d+$`)
+  - Must be a valid Roblox place ID
+  
+  **Usage:**
+  - Returned to client during `beginVerification`
+  - Client directs user to join this place
+  - Game at this place must have integration code to call `completeVerification`
+  
+  **Example:**
+  ```env
+  VERIFICATION_PLACE_ID=123456789
+  ```
+  
+  **How to find:**
+  1. Go to your Roblox game page
+  2. Look at the URL: `https://www.roblox.com/games/123456789/game-name`
+  3. The number `123456789` is your place ID
+</ParamField>
+
+## Optional Variables
+
+These variables have sensible defaults and can be customized.
+
+<ParamField path="ROBLOX_COOKIE" type="string" default="">
+  Roblox authentication cookie for API requests.
+  
+  **Usage:**
+  - Used by `fetchRobloxUserProfile` to get user data from Roblox API
+  - Optional but may help with rate limiting
+  - If not provided, makes unauthenticated requests
+  
+  **Security:**
+  - Never commit this to version control
+  - Store only in `.env` file
+  - Cookie format: `.ROBLOSECURITY=<value>`
+  
+  **Example:**
+  ```env
+  ROBLOX_COOKIE=_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_...
+  ```
+  
+  <Warning>
+    This is a sensitive credential. Anyone with this cookie can access your Roblox account.
+  </Warning>
+</ParamField>
+
+<ParamField path="CHAT_DEFAULT_MAX_MESSAGE_LENGTH" type="number" default="280">
+  Maximum length for chat messages in characters.
+  
+  **Validation:**
+  - Must be a positive integer
+  - Coerced to number if provided as string
+  
+  **Usage:**
+  - Applied to all channels by default
+  - Can be overridden per channel with `CHAT_LIMITS_OVERRIDES`
+  - Enforced in `packages/api/src/routers/chat.ts`
+  
+  **Example:**
+  ```env
+  CHAT_DEFAULT_MAX_MESSAGE_LENGTH=500
+  ```
+  
+  **Code reference:**
+  ```typescript packages/api/src/routers/chat.ts
+  if (content.length > limits.maxMessageLength) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Message exceeds ${limits.maxMessageLength} characters.`,
+    });
+  }
+  ```
+</ParamField>
+
+<ParamField path="CHAT_DEFAULT_RATE_LIMIT_COUNT" type="number" default="4">
+  Number of messages allowed per rate limit window.
+  
+  **Validation:**
+  - Must be a positive integer
+  - Coerced to number if provided as string
+  
+  **Usage:**
+  - Users can send this many messages per window before being rate limited
+  - Applied per user (by `robloxUserId`)
+  - Can be overridden per channel with `CHAT_LIMITS_OVERRIDES`
+  
+  **Example:**
+  ```env
+  CHAT_DEFAULT_RATE_LIMIT_COUNT=10
+  ```
+  
+  **How it works:**
+  - User sends message → timestamp recorded
+  - System checks timestamps in current window
+  - If count exceeds limit → reject with `TOO_MANY_REQUESTS`
+</ParamField>
+
+<ParamField path="CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS" type="number" default="5000">
+  Rate limit window duration in milliseconds.
+  
+  **Validation:**
+  - Must be a positive integer
+  - Coerced to number if provided as string
+  
+  **Usage:**
+  - Defines the sliding window for rate limiting
+  - Default: 5000ms (5 seconds)
+  - With default count of 4: users can send 4 messages per 5 seconds
+  - Can be overridden per channel with `CHAT_LIMITS_OVERRIDES`
+  
+  **Examples:**
+  ```env
+  # 4 messages per 5 seconds (default)
+  CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS=5000
+  
+  # 4 messages per 10 seconds (slower)
+  CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS=10000
+  
+  # 4 messages per 2 seconds (faster)
+  CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS=2000
+  ```
+</ParamField>
+
+<ParamField path="CHAT_LIMITS_OVERRIDES" type="string" default="">
+  JSON object defining per-channel limit overrides.
+  
+  **Format:**
+  ```json
+  {
+    "channel-name": {
+      "maxMessageLength": 500,
+      "rateLimitCount": 10,
+      "rateLimitWindowMs": 10000
+    }
+  }
+  ```
+  
+  **Usage:**
+  - Override limits for specific channels (Roblox JobIds)
+  - All fields are optional (falls back to defaults)
+  - Parsed in `packages/api/src/config/chatLimits.ts`
+  
+  **Example:**
+  ```env
+  CHAT_LIMITS_OVERRIDES='{"vip-server-123":{"maxMessageLength":1000,"rateLimitCount":20},"test-channel":{"rateLimitWindowMs":1000}}'
+  ```
+  
+  **Code reference:**
+  ```typescript packages/api/src/config/chatLimits.ts
+  export const getChatLimitsForChannel = (channel: string): ChatLimits => {
+    const override = overrides[channel];
+    if (!override) return defaultLimits;
+    
+    return {
+      maxMessageLength: toLimit(override.maxMessageLength, defaultLimits.maxMessageLength),
+      rateLimitCount: toLimit(override.rateLimitCount, defaultLimits.rateLimitCount),
+      rateLimitWindowMs: toLimit(override.rateLimitWindowMs, defaultLimits.rateLimitWindowMs),
+    };
+  };
+  ```
+  
+  <Note>
+    If JSON parsing fails, the server logs an error and uses default limits for all channels.
+  </Note>
+</ParamField>
+
+## Environment Validation
+
+The backend validates all environment variables on startup using Zod schemas defined in `packages/api/src/config/env.ts`.
+
+### Validation Schema
+
+```typescript packages/api/src/config/env.ts
+const envSchema = z.object({
+  JWT_SECRET: z.string().min(32).max(64),
+  VERIFICATION_SECRET: z.string().min(64),
+  VERIFICATION_PLACE_ID: z.string().regex(/^\d+$/, "Must be a Roblox place id"),
+  ROBLOX_COOKIE: z.string().trim().min(1).optional(),
+  CHAT_DEFAULT_MAX_MESSAGE_LENGTH: z.coerce.number().int().positive().default(280),
+  CHAT_DEFAULT_RATE_LIMIT_COUNT: z.coerce.number().int().positive().default(4),
+  CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(5000),
+  CHAT_LIMITS_OVERRIDES: z.string().optional(),
+});
+
+const parsedEnv = envSchema.safeParse(process.env);
+
+if (!parsedEnv.success) {
+  console.error("Invalid environment variables on BACKEND:", parsedEnv.error.format());
+  process.exit(1);
+}
+```
+
+### Error Example
+
+If validation fails, you'll see:
+
+```bash
+Invalid environment variables on BACKEND: {
+  JWT_SECRET: { _errors: [ 'String must contain at least 32 character(s)' ] },
+  VERIFICATION_SECRET: { _errors: [ 'String must contain at least 64 character(s)' ] },
+  VERIFICATION_PLACE_ID: { _errors: [ 'Must be a Roblox place id' ] }
+}
+```
+
+## Example Configuration Files
+
+<CodeGroup>
+  ```env Minimal (Development)
+  JWT_SECRET=dev_secret_32_chars_minimum_abc123
+  VERIFICATION_SECRET=dev_verification_secret_64_chars_minimum_abc123_xyz789_abc123_xyz789_abc123
+  VERIFICATION_PLACE_ID=123456789
+  ```
+  
+  ```env Full Configuration (Production)
+  # Required
+  JWT_SECRET=prod_jwt_secret_generated_with_openssl_rand_base64_48
+  VERIFICATION_SECRET=prod_verification_secret_generated_with_openssl_rand_base64_64_very_long_and_secure
+  VERIFICATION_PLACE_ID=987654321
+  
+  # Optional
+  ROBLOX_COOKIE=_|WARNING:-DO-NOT-SHARE-THIS...
+  CHAT_DEFAULT_MAX_MESSAGE_LENGTH=280
+  CHAT_DEFAULT_RATE_LIMIT_COUNT=4
+  CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS=5000
+  CHAT_LIMITS_OVERRIDES='{"vip-channel":{"maxMessageLength":500,"rateLimitCount":10}}'
+  ```
+  
+  ```env Custom Limits
+  JWT_SECRET=custom_jwt_secret_32_chars_minimum_abc123
+  VERIFICATION_SECRET=custom_verification_secret_64_chars_minimum_abc123_xyz789_abc123_xyz789_abc123
+  VERIFICATION_PLACE_ID=123456789
+  
+  # Allow longer messages
+  CHAT_DEFAULT_MAX_MESSAGE_LENGTH=500
+  
+  # More lenient rate limiting
+  CHAT_DEFAULT_RATE_LIMIT_COUNT=10
+  CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS=10000
+  
+  # Per-channel overrides
+  CHAT_LIMITS_OVERRIDES='{"premium-123":{"maxMessageLength":1000,"rateLimitCount":20,"rateLimitWindowMs":5000}}'
+  ```
+</CodeGroup>
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Use Strong Random Secrets">
+    Generate all secrets with cryptographically secure random generators:
+    
+    ```bash
+    # JWT_SECRET (32-64 chars)
+    openssl rand -base64 48
+    
+    # VERIFICATION_SECRET (64+ chars)
+    openssl rand -base64 64
+    ```
+    
+    Never use predictable values like "secret123" or "password".
+  </Step>
+
+  <Step title="Never Commit .env Files">
+    Add to `.gitignore`:
+    
+    ```bash .gitignore
+    apps/server/.env
+    .env
+    .env.*
+    !.env.example
+    ```
+  </Step>
+
+  <Step title="Rotate Secrets Regularly">
+    Plan to rotate secrets periodically:
+    
+    - **JWT_SECRET**: Rotating invalidates all active sessions
+    - **VERIFICATION_SECRET**: Must update in both backend and Roblox game
+  </Step>
+
+  <Step title="Use Environment-Specific Configs">
+    Use different secrets for development, staging, and production:
+    
+    ```bash
+    apps/server/.env.development
+    apps/server/.env.staging
+    apps/server/.env.production
+    ```
+  </Step>
+
+  <Step title="Protect ROBLOX_COOKIE">
+    If using `ROBLOX_COOKIE`:
+    
+    - Use a dedicated bot account (not your personal account)
+    - Grant minimal permissions
+    - Monitor for unauthorized access
+    - Rotate if compromised
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Server exits immediately with validation errors">
+    Check the error message format:
+    ```
+    Invalid environment variables on BACKEND: { ... }
+    ```
+    
+    Fix the indicated variables and restart.
+  </Accordion>
+
+  <Accordion title="JWT_SECRET too short/long">
+    Must be exactly 32-64 characters:
+    
+    ```bash
+    # Generate 48-character secret (base64 encoded)
+    openssl rand -base64 48
+    ```
+  </Accordion>
+
+  <Accordion title="VERIFICATION_SECRET too short">
+    Must be at least 64 characters:
+    
+    ```bash
+    # Generate 64+ character secret
+    openssl rand -base64 64
+    ```
+  </Accordion>
+
+  <Accordion title="VERIFICATION_PLACE_ID invalid">
+    Must be numeric only (no spaces, letters, or special characters):
+    
+    ```env
+    # Correct
+    VERIFICATION_PLACE_ID=123456789
+    
+    # Incorrect
+    VERIFICATION_PLACE_ID="123456789"
+    VERIFICATION_PLACE_ID=123 456 789
+    ```
+  </Accordion>
+
+  <Accordion title="CHAT_LIMITS_OVERRIDES not working">
+    Ensure valid JSON format:
+    
+    ```env
+    # Correct (single quotes for env, double quotes in JSON)
+    CHAT_LIMITS_OVERRIDES='{"channel":{"maxMessageLength":500}}'
+    
+    # Incorrect (syntax error)
+    CHAT_LIMITS_OVERRIDES={channel: {maxMessageLength: 500}}
+    ```
+    
+    Check server logs for JSON parsing errors.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Server Setup" icon="server" href="/self-hosting/server-setup">
+    Set up and run the backend server
+  </Card>
+  <Card title="Game Integration" icon="gamepad" href="/self-hosting/game-integration">
+    Integrate with your Roblox game
+  </Card>
+</CardGroup>

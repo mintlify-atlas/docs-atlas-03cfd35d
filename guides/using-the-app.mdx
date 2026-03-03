@@ -1,0 +1,302 @@
+---
+title: Using the App
+description: Learn how to use BloxChat to communicate in Roblox games
+---
+
+Once you've installed and verified BloxChat, you can start chatting with other players in your Roblox games. This guide covers all the features available in the desktop application.
+
+## Joining a Roblox Game
+
+BloxChat automatically detects when you join a Roblox game by monitoring your Roblox logs folder.
+
+<Steps>
+  <Step title="Launch BloxChat">
+    Open the BloxChat desktop application and ensure you're logged in.
+  </Step>
+  
+  <Step title="Join a Roblox game">
+    Launch any Roblox game through the Roblox client or browser.
+  </Step>
+  
+  <Step title="Start chatting">
+    BloxChat will automatically detect your game session and connect you to the appropriate chat channel.
+  </Step>
+</Steps>
+
+<Note>
+  Each Roblox server has a unique **JobId**. BloxChat uses this to create separate chat channels, so you'll only see messages from players in the same server instance.
+</Note>
+
+## Understanding Channels
+
+BloxChat organizes conversations by Roblox server instances (JobId-based channels).
+
+### How Channels Work
+
+- **Automatic switching**: When you join a different Roblox server, BloxChat automatically switches to that server's channel
+- **Isolated conversations**: Each server has its own chat history
+- **Server identification**: The channel header shows your current JobId
+
+### Auto-Join Messages
+
+You can configure BloxChat to automatically send a message when you join a new channel. This lets other players know you've joined the server.
+
+<Accordion title="How to configure auto-join messages">
+  1. Open **Settings** from the BloxChat menu
+  2. Scroll to the **Automation** section
+  3. Enter your desired message in the **Auto Join Message** field
+  4. Click **Save Settings**
+  
+  Example messages:
+  - `joined the channel`
+  - `hey everyone!`
+  - `👋`
+</Accordion>
+
+## Sending Messages
+
+Sending messages in BloxChat is straightforward and includes several helpful features.
+
+### Basic Messaging
+
+<Steps>
+  <Step title="Focus the chat input">
+    Click the input field at the bottom of the window, or press `/` while in Roblox to auto-focus BloxChat.
+  </Step>
+  
+  <Step title="Type your message">
+    Enter your message in the input field. You'll see a character counter showing remaining characters.
+  </Step>
+  
+  <Step title="Send the message">
+    Press **Enter** to send your message.
+  </Step>
+</Steps>
+
+### Character Limits
+
+Message length is limited by the server configuration. The input field displays your remaining character count:
+
+- **Green text**: You're within the limit
+- **Red text**: Your message is too long and cannot be sent
+
+<Tip>
+  The default character limit is typically 280 characters, but server administrators can configure different limits per channel.
+</Tip>
+
+### Reply Threading
+
+BloxChat supports threaded conversations, making it easy to respond to specific messages.
+
+<Steps>
+  <Step title="Find the message you want to reply to">
+    Scroll through the chat to locate the message.
+  </Step>
+  
+  <Step title="Click the reply button">
+    Hover over the message and click the reply icon.
+  </Step>
+  
+  <Step title="Write your reply">
+    A reply indicator appears at the bottom showing which message you're replying to. Type your response.
+  </Step>
+  
+  <Step title="Send or cancel">
+    Press **Enter** to send, or click the **X** button to cancel the reply.
+  </Step>
+</Steps>
+
+<Note>
+  When you reply to a message, a preview of the original message appears above your reply in the chat, making it easy to follow conversations.
+</Note>
+
+## Auto-Focus Features
+
+BloxChat includes keyboard shortcuts to seamlessly switch between Roblox and the chat window.
+
+### Focus BloxChat with `/`
+
+While playing Roblox, press the **`/`** key to automatically focus the BloxChat window and input field. This works when:
+
+- BloxChat is running
+- The feature is enabled (on by default)
+- Roblox is in the foreground
+
+### Return Focus to Roblox with `Esc`
+
+Press **`Esc`** while in BloxChat to return keyboard focus to the Roblox game window. This is useful for:
+
+- Quickly returning to gameplay
+- Submitting empty messages (nothing will be sent)
+
+<Tip>
+  You can send a message and immediately return to Roblox by pressing **Enter** to send, then **Esc** to return focus.
+</Tip>
+
+## Local Commands
+
+BloxChat supports local commands that execute actions in your client without sending a message to other users.
+
+### Available Commands
+
+<Accordion title="/clear">
+  **Clear local chat history**
+  
+  Usage: `/clear`
+  
+  This command removes all messages from your local BloxChat window. This only affects your view—other users will still see all messages.
+  
+  **When to use this:**
+  - You want a clean chat window
+  - You're debugging or testing
+  - You want to reduce clutter
+  
+  <Warning>
+    This action cannot be undone. Cleared messages cannot be recovered.
+  </Warning>
+</Accordion>
+
+### Command Auto-Completion
+
+When you type `/` at the start of your message, BloxChat shows available commands:
+
+1. Type `/` in the input field
+2. A suggestions menu appears showing matching commands
+3. Use **Arrow Up/Down** to navigate suggestions
+4. Press **Enter** to select a command
+
+## Mentions and Emoji
+
+BloxChat includes auto-completion for mentions and emoji to enhance your messages.
+
+### Mentioning Users
+
+<Steps>
+  <Step title="Start typing @">
+    Type `@` followed by a username to mention someone.
+  </Step>
+  
+  <Step title="Select from suggestions">
+    A list of active users appears. Use arrow keys or mouse to select.
+  </Step>
+  
+  <Step title="Send your message">
+    The mention is highlighted in the chat for both you and the recipient.
+  </Step>
+</Steps>
+
+### Using Emoji Shortcodes
+
+Type emoji using shortcodes like `:smile:`, `:fire:`, or `:tada:`:
+
+1. Type `:` followed by the emoji name
+2. Suggestions appear as you type
+3. Select the emoji from the list or complete typing the full shortcode
+
+<Tip>
+  Emoji shortcodes are automatically converted to Unicode emoji when your message is sent.
+</Tip>
+
+## Discord Rich Presence
+
+BloxChat can display your current activity on Discord through Rich Presence integration.
+
+### How It Works
+
+- Shows "Playing BloxChat" or custom activity on your Discord profile
+- Updates automatically when you switch channels
+- Displays game/server information
+
+### Configuring Discord RPC
+
+<Tabs>
+  <Tab title="Enable Rich Presence">
+    1. Open **Settings** in BloxChat
+    2. Scroll to the **Integrations** section
+    3. Enter a Discord Application ID in **Discord RPC App ID**
+    4. Click **Save Settings**
+    5. Restart BloxChat for changes to take effect
+  </Tab>
+  
+  <Tab title="Disable Rich Presence">
+    1. Open **Settings** in BloxChat
+    2. Scroll to the **Integrations** section
+    3. Set **Discord RPC App ID** to `-1`
+    4. Click **Save Settings**
+  </Tab>
+</Tabs>
+
+<Note>
+  You need to create a Discord application to get an Application ID. Visit the [Discord Developer Portal](https://discord.com/developers/applications) to create one.
+</Note>
+
+## Media Sharing
+
+BloxChat supports sharing images and videos through URLs.
+
+### Sharing Media
+
+1. Copy a direct image or video URL
+2. Paste the URL in your message
+3. Send the message
+4. The media will appear inline for users with image loading enabled
+
+### Favoriting Media
+
+You can save frequently used images or GIFs for quick access:
+
+<Steps>
+  <Step title="Find media in chat">
+    Locate an image or video shared in the chat.
+  </Step>
+  
+  <Step title="Click the star icon">
+    Hover over the media and click the star icon to favorite it.
+  </Step>
+  
+  <Step title="Access favorites">
+    Click the star button in the chat input area to view your favorited media.
+  </Step>
+  
+  <Step title="Insert into messages">
+    Click any favorited media to insert its URL into your current message.
+  </Step>
+</Steps>
+
+<Warning>
+  Loading external images can reveal your IP address to the server hosting the image. You can disable image loading in Settings under **Privacy & Media**.
+</Warning>
+
+## Tips for Better Chatting
+
+<AccordionGroup>
+  <Accordion title="Use keyboard shortcuts">
+    - Press `/` to focus BloxChat from Roblox
+    - Press `Esc` to return focus to Roblox
+    - Use `Arrow Up/Down` to navigate auto-complete suggestions
+  </Accordion>
+  
+  <Accordion title="Organize with reply threads">
+    Use reply threading to keep conversations organized, especially in busy channels with multiple topics.
+  </Accordion>
+  
+  <Accordion title="Adjust opacity for gameplay">
+    If BloxChat overlays your game window, adjust the GUI opacity in Settings to make it more transparent without hiding your game.
+  </Accordion>
+  
+  <Accordion title="Clear clutter regularly">
+    Use `/clear` to remove old messages and keep your chat window clean and fast.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Customize BloxChat settings to match your preferences
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Resolve common issues and errors
+  </Card>
+</CardGroup>

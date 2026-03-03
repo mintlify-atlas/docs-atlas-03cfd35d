@@ -1,0 +1,488 @@
+---
+title: Server Setup
+description: Install dependencies and run the BloxChat backend server
+---
+
+## Prerequisites
+
+Before setting up the server, ensure you have the required software installed.
+
+<Steps>
+  <Step title="Install Bun">
+    BloxChat uses Bun v1.3.8. Install it from [bun.sh](https://bun.sh):
+    
+    ```bash
+    # Windows (PowerShell)
+    powershell -c "irm bun.sh/install.ps1 | iex"
+    
+    # Linux/macOS
+    curl -fsSL https://bun.sh/install | bash
+    ```
+    
+    Verify installation:
+    ```bash
+    bun --version
+    # Should output 1.3.8 or higher
+    ```
+  </Step>
+
+  <Step title="Install Node.js">
+    Node.js 18+ is required. Download from [nodejs.org](https://nodejs.org):
+    
+    ```bash
+    node --version
+    # Should output v18.x.x or higher
+    ```
+  </Step>
+
+  <Step title="Install Rust (for building desktop)">
+    If you plan to build the desktop app, install Rust v1.88.0:
+    
+    ```bash
+    # Install rustup
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    
+    # The project uses rust-toolchain.toml, so correct version will be used
+    ```
+    
+    <Note>
+      On Windows, you also need MSVC build tools and WebView2 runtime. See [Tauri prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites).
+    </Note>
+  </Step>
+</Steps>
+
+## Clone the Repository
+
+Clone the BloxChat source code:
+
+```bash
+git clone https://github.com/logixism/bloxchat.git
+cd bloxchat
+```
+
+## Install Dependencies
+
+Install all workspace dependencies:
+
+```bash
+bun install
+```
+
+This installs packages for:
+- `apps/desktop` - Tauri desktop app
+- `apps/server` - Bun backend server
+- `packages/api` - Shared tRPC API logic
+
+## Configure Environment Variables
+
+<Warning>
+  The server will not start without proper environment configuration.
+</Warning>
+
+Create `apps/server/.env` with required variables:
+
+```bash apps/server/.env
+# Required secrets
+JWT_SECRET=your_jwt_secret_32_to_64_characters_long
+VERIFICATION_SECRET=your_verification_secret_at_least_64_characters_long
+VERIFICATION_PLACE_ID=123456789
+
+# Optional configuration
+ROBLOX_COOKIE=
+CHAT_DEFAULT_MAX_MESSAGE_LENGTH=280
+CHAT_DEFAULT_RATE_LIMIT_COUNT=4
+CHAT_DEFAULT_RATE_LIMIT_WINDOW_MS=5000
+CHAT_LIMITS_OVERRIDES=
+```
+
+<Steps>
+  <Step title="Generate JWT_SECRET">
+    Must be 32-64 characters. Generate a secure random string:
+    
+    ```bash
+    openssl rand -base64 48
+    ```
+  </Step>
+
+  <Step title="Generate VERIFICATION_SECRET">
+    Must be 64+ characters. This is shared with your Roblox game:
+    
+    ```bash
+    openssl rand -base64 64
+    ```
+    
+    <Warning>
+      Keep this secret secure. Anyone with this secret can verify users.
+    </Warning>
+  </Step>
+
+  <Step title="Set VERIFICATION_PLACE_ID">
+    Enter the Roblox place ID where users will verify:
+    
+    ```env
+    VERIFICATION_PLACE_ID=123456789
+    ```
+    
+    Users will be directed to this place during login.
+  </Step>
+</Steps>
+
+See [Environment Variables](/self-hosting/environment-variables) for complete documentation.
+
+## Development Mode
+
+Run the backend server and desktop app in development mode:
+
+```bash
+bun run dev
+```
+
+This command:
+- Starts the backend server on `http://localhost:3000`
+- Watches for file changes and auto-reloads
+- Launches the Tauri desktop app in dev mode
+
+<CodeGroup>
+  ```bash Terminal Output
+  tRPC server running at http://localhost:3000
+  
+  [tauri] Running BeforeDevCommand (`bun run dev`)
+  [tauri] Watching for changes...
+  ```
+</CodeGroup>
+
+### Configure Desktop App for Local API
+
+By default, the desktop app connects to the production API at `https://bloxchat.logix.lol`.
+
+To test with your local server:
+
+<Steps>
+  <Step title="Launch the app">
+    Run `bun run dev` to start the desktop app
+  </Step>
+
+  <Step title="Open Settings">
+    Click the settings icon in the app
+  </Step>
+
+  <Step title="Update API URL">
+    Change **API Server URL** to:
+    ```
+    http://localhost:3000
+    ```
+    
+    <Warning>
+      Must include `http://` prefix for local development (non-TLS).
+    </Warning>
+  </Step>
+
+  <Step title="Save and restart">
+    Save settings. The app will reconnect to your local server.
+  </Step>
+</Steps>
+
+## Production Mode
+
+### Run Backend Only
+
+To run just the backend server (without desktop app):
+
+```bash
+bun run start
+```
+
+Or directly:
+
+```bash
+cd apps/server
+bun run src/index.ts
+```
+
+The server listens on port `3000` by default:
+
+```typescript apps/server/src/index.ts
+serverInstance.listen(3000);
+console.log("tRPC server running at http://localhost:3000");
+```
+
+### Build for Production
+
+Build all packages:
+
+```bash
+bun run build
+```
+
+This runs Turbo build across the workspace.
+
+### Production Deployment
+
+<Accordion title="Deploy with Process Manager">
+  Use a process manager like PM2 or systemd:
+  
+  **PM2 Example:**
+  ```bash
+  # Install PM2
+  npm install -g pm2
+  
+  # Start server
+  cd apps/server
+  pm2 start "bun run src/index.ts" --name bloxchat-server
+  
+  # Save and auto-start on boot
+  pm2 save
+  pm2 startup
+  ```
+  
+  **Systemd Service:**
+  ```ini /etc/systemd/system/bloxchat.service
+  [Unit]
+  Description=BloxChat Backend Server
+  After=network.target
+  
+  [Service]
+  Type=simple
+  User=bloxchat
+  WorkingDirectory=/opt/bloxchat/apps/server
+  ExecStart=/usr/local/bin/bun run src/index.ts
+  Restart=on-failure
+  Environment="NODE_ENV=production"
+  
+  [Install]
+  WantedBy=multi-user.target
+  ```
+  
+  Enable and start:
+  ```bash
+  sudo systemctl enable bloxchat
+  sudo systemctl start bloxchat
+  ```
+</Accordion>
+
+<Accordion title="Deploy Behind Reverse Proxy">
+  Use nginx or Caddy to add HTTPS and handle WebSocket upgrades:
+  
+  **Nginx Configuration:**
+  ```nginx /etc/nginx/sites-available/bloxchat
+  server {
+    listen 80;
+    server_name bloxchat.yourdomain.com;
+    return 301 https://$server_name$request_uri;
+  }
+  
+  server {
+    listen 443 ssl http2;
+    server_name bloxchat.yourdomain.com;
+    
+    ssl_certificate /etc/letsencrypt/live/bloxchat.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bloxchat.yourdomain.com/privkey.pem;
+    
+    location / {
+      proxy_pass http://localhost:3000;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+  }
+  ```
+  
+  **Caddy Configuration:**
+  ```caddyfile Caddyfile
+  bloxchat.yourdomain.com {
+    reverse_proxy localhost:3000
+  }
+  ```
+  
+  Caddy automatically handles HTTPS with Let's Encrypt.
+</Accordion>
+
+<Accordion title="Deploy with Docker">
+  Create a Dockerfile for the server:
+  
+  ```dockerfile Dockerfile
+  FROM oven/bun:1.3.8
+  
+  WORKDIR /app
+  
+  # Copy workspace files
+  COPY package.json bun.lockb ./
+  COPY apps/server ./apps/server
+  COPY packages/api ./packages/api
+  
+  # Install dependencies
+  RUN bun install --frozen-lockfile
+  
+  # Expose port
+  EXPOSE 3000
+  
+  # Start server
+  CMD ["bun", "run", "start"]
+  ```
+  
+  Build and run:
+  ```bash
+  docker build -t bloxchat-server .
+  docker run -d -p 3000:3000 --env-file apps/server/.env --name bloxchat bloxchat-server
+  ```
+</Accordion>
+
+## Build Desktop App
+
+Build the desktop app installer for distribution:
+
+```bash
+bun run desktop:build
+```
+
+Or directly:
+
+```bash
+cd apps/desktop
+bunx tauri build
+```
+
+This creates:
+- **MSI Installer**: `apps/desktop/src-tauri/target/release/bundle/msi/BloxChat_*.msi`
+- **Executable**: `apps/desktop/src-tauri/target/release/BloxChat.exe`
+
+<Note>
+  Building the desktop app requires Windows and all Tauri prerequisites installed.
+</Note>
+
+### Customize API URL for Distribution
+
+Before building, you can set the default API URL in the app. Users can always change it in Settings, but this sets the initial value.
+
+Look for the API URL configuration in the desktop app source code (typically in settings or config files).
+
+## Useful Commands
+
+<CodeGroup>
+  ```bash Development
+  # Start server + desktop in dev mode
+  bun run dev
+  
+  # Run backend only (dev mode with watch)
+  cd apps/server
+  bun run dev
+  
+  # Type check all packages
+  bun run check-types
+  ```
+  
+  ```bash Production
+  # Run backend server once
+  bun run start
+  
+  # Build all packages
+  bun run build
+  
+  # Build desktop app
+  bun run desktop:build
+  ```
+  
+  ```bash Maintenance
+  # Format code
+  bun run format
+  
+  # Bump desktop app version
+  bun run desktop:version
+  ```
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Server won't start - environment variable errors">
+    The server validates all environment variables on startup. Check `packages/api/src/config/env.ts` for requirements:
+    
+    - `JWT_SECRET`: Must be 32-64 characters
+    - `VERIFICATION_SECRET`: Must be 64+ characters
+    - `VERIFICATION_PLACE_ID`: Must be numeric Roblox place ID
+    
+    Error format:
+    ```
+    Invalid environment variables on BACKEND:
+    {
+      JWT_SECRET: { _errors: [ 'String must contain at least 32 character(s)' ] }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Desktop app can't connect to server">
+    Verify:
+    1. Server is running on `http://localhost:3000`
+    2. API URL in app Settings is exactly `http://localhost:3000` (include `http://`)
+    3. No firewall blocking local connections
+    
+    Check server logs for incoming requests.
+  </Accordion>
+
+  <Accordion title="WebSocket connection fails">
+    The server uses `ws` package and tRPC WebSocket adapter. Ensure:
+    - WebSocket upgrades are allowed (check reverse proxy config)
+    - No middleware blocking upgrade headers
+    - CORS is configured to allow connections
+    
+    The server code in `apps/server/src/index.ts` shows WebSocket setup:
+    ```typescript
+    const wss = new WebSocketServer({ server: serverInstance });
+    applyWSSHandler({ wss, router: appRouter, createContext });
+    ```
+  </Accordion>
+
+  <Accordion title="Build failures">
+    Common issues:
+    
+    **Bun version mismatch:**
+    ```bash
+    bun --version  # Should be 1.3.8
+    ```
+    
+    **Missing Rust toolchain:**
+    ```bash
+    rustc --version  # Should be 1.88.0 or as specified in rust-toolchain.toml
+    ```
+    
+    **Windows MSVC tools not installed:**
+    - Install Visual Studio Build Tools
+    - Install WebView2 runtime
+    
+    See [Tauri prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites).
+  </Accordion>
+
+  <Accordion title="Port 3000 already in use">
+    Change the port in `apps/server/src/index.ts`:
+    
+    ```typescript
+    serverInstance.listen(3000);  // Change to another port
+    ```
+    
+    Or find and kill the process:
+    ```bash
+    # Windows
+    netstat -ano | findstr :3000
+    taskkill /PID <PID> /F
+    
+    # Linux
+    lsof -i :3000
+    kill -9 <PID>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/self-hosting/environment-variables">
+    Learn about all configuration options
+  </Card>
+  <Card title="Game Integration" icon="gamepad" href="/self-hosting/game-integration">
+    Connect your Roblox game to the backend
+  </Card>
+</CardGroup>

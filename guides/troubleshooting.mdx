@@ -1,0 +1,845 @@
+---
+title: Troubleshooting
+description: Solutions to common BloxChat issues and errors
+---
+
+This guide covers common issues you might encounter while using BloxChat and how to resolve them.
+
+## Connection Problems
+
+Issues connecting to the BloxChat backend server.
+
+<AccordionGroup>
+  <Accordion title="App cannot connect to server">
+    **Symptoms:**
+    - "Cannot connect" error messages
+    - Login screen won't load
+    - Verification fails immediately
+    - Messages don't send
+    
+    **Solutions:**
+    
+    <Steps>
+      <Step title="Verify API Server URL">
+        1. Open **Settings** in BloxChat
+        2. Check the **API Server URL** field
+        3. Default should be: `https://bloxchat.logix.lol`
+        4. If incorrect, click **Reset to default host**
+        5. Click **Save Settings**
+      </Step>
+      
+      <Step title="Check your internet connection">
+        - Ensure you're connected to the internet
+        - Try opening a website in your browser
+        - Restart your router if needed
+        - Disable VPN temporarily to test
+      </Step>
+      
+      <Step title="Verify firewall settings">
+        - Check if Windows Firewall is blocking BloxChat
+        - Add BloxChat to firewall exceptions if needed
+        - Temporarily disable antivirus to test (re-enable after testing)
+      </Step>
+      
+      <Step title="Try restarting BloxChat">
+        - Close BloxChat completely
+        - Wait 10 seconds
+        - Reopen BloxChat and test connection
+      </Step>
+    </Steps>
+    
+    <Warning>
+      If you recently changed the API Server URL, make sure you included the full URL including `https://` or `http://`.
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="Local API fails with HTTPS errors">
+    **Symptoms:**
+    - "SSL error" or "HTTPS connection failed"
+    - Local development server won't connect
+    - Certificate errors
+    
+    **Solutions:**
+    
+    When using a local development server, you must use `http://` (not `https://`):
+    
+    <CodeGroup>
+    ```text Correct
+    http://localhost:3000
+    ```
+    
+    ```text Incorrect
+    https://localhost:3000
+    localhost:3000
+    ```
+    </CodeGroup>
+    
+    <Steps>
+      <Step title="Update API Server URL">
+        1. Open **Settings**
+        2. Set **API Server URL** to `http://localhost:3000`
+        3. Click **Save Settings**
+      </Step>
+      
+      <Step title="Verify local server is running">
+        Run this command in your BloxChat repository:
+        ```bash
+        bun run dev
+        ```
+        
+        You should see:
+        ```
+        Server running on http://localhost:3000
+        ```
+      </Step>
+      
+      <Step title="Test API endpoint">
+        Open your browser and navigate to:
+        ```
+        http://localhost:3000
+        ```
+        
+        You should see a response (not an error page).
+      </Step>
+    </Steps>
+  </Accordion>
+  
+  <Accordion title="Connection works but times out frequently">
+    **Symptoms:**
+    - Connection drops randomly
+    - Messages take a long time to send
+    - Chat updates are delayed
+    
+    **Solutions:**
+    
+    1. **Check network stability:**
+       - Test your internet speed
+       - Reduce bandwidth usage from other apps
+       - Move closer to WiFi router
+    
+    2. **Verify server status:**
+       - Check if the hosted backend is experiencing issues
+       - Try switching to a different API server temporarily
+    
+    3. **Reduce app load:**
+       - Clear chat history with `/clear`
+       - Disable image loading in Settings
+       - Close other high-bandwidth applications
+    
+    4. **Update BloxChat:**
+       - Check if you're running the latest version
+       - Update if a newer version is available
+  </Accordion>
+</AccordionGroup>
+
+## Verification Failures
+
+Problems completing the Roblox account verification process.
+
+<AccordionGroup>
+  <Accordion title="Verification code expired before I could join">
+    **Symptoms:**
+    - Timer reaches 0 seconds
+    - "Verification code expired" message
+    - Can't submit code in-game
+    
+    **Solutions:**
+    
+    Verification codes expire after **10 minutes**. To get a new code:
+    
+    <Steps>
+      <Step title="Return to BloxChat">
+        Navigate back to the BloxChat login screen.
+      </Step>
+      
+      <Step title="Start verification again">
+        Click **Start Verification** to generate a new code.
+      </Step>
+      
+      <Step title="Join quickly">
+        Immediately click **Join verification game** and enter the new code before it expires.
+      </Step>
+    </Steps>
+    
+    <Tip>
+      To avoid expiration, have Roblox already open before starting verification, so you can join the game faster.
+    </Tip>
+  </Accordion>
+  
+  <Accordion title="Invalid or expired verification code error">
+    **Symptoms:**
+    - Error message in the verification game
+    - "Invalid verification code" or "expired code"
+    - Code was accepted but verification didn't complete
+    
+    **Possible causes and solutions:**
+    
+    <Tabs>
+      <Tab title="Wrong code entered">
+        **Solution:**
+        - Double-check the code shown in BloxChat
+        - Ensure you didn't accidentally include spaces
+        - Verify you're entering the most recent code
+        - Codes are **case-insensitive**, so `ABC123` = `abc123`
+      </Tab>
+      
+      <Tab title="Code already used">
+        **Solution:**
+        - Each code can only be used once
+        - If you already completed verification, you're logged in
+        - If verification failed, get a new code
+        - Don't share your verification code with others
+      </Tab>
+      
+      <Tab title="Backend server issue">
+        **Solution:**
+        1. Wait 1-2 minutes for server recovery
+        2. Click **Start Verification** again
+        3. If issue persists, check API Server URL in Settings
+        4. Try resetting to default host
+      </Tab>
+      
+      <Tab title="Rate limit hit">
+        **Solution:**
+        - Wait 60 seconds before trying again
+        - Don't spam verification attempts
+        - Rate limits reset after 1 minute
+        
+        <Warning>
+          Maximum 20 verification attempts per minute. Excessive attempts will trigger longer rate limits.
+        </Warning>
+      </Tab>
+    </Tabs>
+  </Accordion>
+  
+  <Accordion title="Verification game won't load or join">
+    **Symptoms:**
+    - Clicking "Join verification game" does nothing
+    - Roblox opens but game doesn't load
+    - Error message when trying to join
+    
+    **Solutions:**
+    
+    <Steps>
+      <Step title="Verify Roblox is installed">
+        - Ensure Roblox is installed on your system
+        - Try launching any Roblox game to confirm it works
+        - Reinstall Roblox if necessary
+      </Step>
+      
+      <Step title="Check verification Place ID">
+        The backend server must have a valid `VERIFICATION_PLACE_ID` configured.
+        
+        **For self-hosted servers:**
+        - Verify `VERIFICATION_PLACE_ID` in your `.env` file
+        - Ensure the Place ID corresponds to a published Roblox game
+        - Confirm the game has the verification script integrated
+        
+        **For hosted server:**
+        - This should work automatically
+        - Contact support if the game link is broken
+      </Step>
+      
+      <Step title="Try joining manually">
+        1. Copy the verification game URL from BloxChat
+        2. Open the URL in your browser
+        3. Click "Play" on the Roblox website
+        4. Enter your verification code in-game
+      </Step>
+      
+      <Step title="Check Roblox account status">
+        - Ensure you're logged into Roblox on your browser
+        - Verify your Roblox account isn't suspended
+        - Check if you meet any game age requirements
+      </Step>
+    </Steps>
+  </Accordion>
+  
+  <Accordion title="Verification completes in-game but BloxChat doesn't log in">
+    **Symptoms:**
+    - Game confirms verification successful
+    - BloxChat still shows login screen
+    - No error messages
+    
+    **Solutions:**
+    
+    <Steps>
+      <Step title="Wait for polling">
+        BloxChat polls the backend every 2-3 seconds to check verification status. Wait up to 10 seconds after submitting your code.
+      </Step>
+      
+      <Step title="Check for errors">
+        Look at the BloxChat window for any error messages or status updates.
+      </Step>
+      
+      <Step title="Restart BloxChat">
+        1. Close BloxChat completely
+        2. Reopen the app
+        3. You may already be logged in
+        4. If not, start verification again
+      </Step>
+      
+      <Step title="Verify API connectivity">
+        - Ensure your API Server URL is correct
+        - Test connection by opening Settings
+        - Try resetting to default host
+      </Step>
+      
+      <Step title="Check backend logs (self-hosted only)">
+        If you're running your own backend:
+        ```bash
+        bun run start
+        ```
+        
+        Look for errors in the console output related to verification.
+      </Step>
+    </Steps>
+  </Accordion>
+  
+  <Accordion title="Session expires immediately after login">
+    **Symptoms:**
+    - Login succeeds but you're logged out moments later
+    - "Session expired" errors right after verification
+    - Can't stay logged in
+    
+    **Solutions:**
+    
+    1. **Check system time:**
+       - Ensure your computer's date and time are correct
+       - JWT tokens depend on accurate time synchronization
+       - Enable automatic time synchronization in Windows
+    
+    2. **Verify JWT expiry:**
+       - Default session duration is 1 hour
+       - Self-hosted servers may have different expiry times
+       - Check `JWT_EXPIRY` in server `.env` configuration
+    
+    3. **Clear local storage:**
+       - Close BloxChat
+       - Delete local storage/cache (varies by platform)
+       - Reopen and verify again
+    
+    4. **Update BloxChat:**
+       - Ensure you're running the latest version
+       - Older versions may have session management bugs
+  </Accordion>
+</AccordionGroup>
+
+## Channel Switching Issues
+
+Problems with automatic channel detection and switching.
+
+<AccordionGroup>
+  <Accordion title="Channel doesn't switch when joining new server">
+    **Symptoms:**
+    - Still chatting in old channel after switching servers
+    - JobId doesn't update
+    - Messages go to wrong channel
+    
+    **Solutions:**
+    
+    <Steps>
+      <Step title="Verify Roblox logs path">
+        1. Open **Settings** in BloxChat
+        2. Check **Roblox Logs Folder** under Roblox Integration
+        3. Confirm the path is correct:
+           - Default: `C:\Users\YourUsername\AppData\Local\Roblox\logs`
+        4. If wrong, click **Use default Path**
+        5. Click **Save Settings**
+      </Step>
+      
+      <Step title="Ensure logs are being written">
+        1. Join a Roblox game
+        2. Navigate to your Roblox logs folder
+        3. Verify new log files are being created
+        4. If not, Roblox may be installed in a custom location
+      </Step>
+      
+      <Step title="Restart BloxChat">
+        1. Close BloxChat completely
+        2. Join a Roblox game
+        3. Reopen BloxChat
+        4. Check if channel updates
+      </Step>
+      
+      <Step title="Check file permissions">
+        - Ensure BloxChat has read access to the Roblox logs folder
+        - Run BloxChat as administrator if needed (temporarily for testing)
+        - Check Windows folder permissions
+      </Step>
+    </Steps>
+    
+    <Warning>
+      If the Roblox logs path is incorrect, BloxChat cannot detect server changes. Verify this setting first.
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="Channel switches to wrong JobId">
+    **Symptoms:**
+    - Channel updates but shows incorrect JobId
+    - Chatting with different players than in your game
+    - Channel ID doesn't match expected value
+    
+    **Possible causes:**
+    
+    1. **Multiple Roblox instances:**
+       - Running multiple Roblox games simultaneously
+       - BloxChat detects the most recent log entry
+       - Close other Roblox instances and rejoin your intended game
+    
+    2. **Log file race condition:**
+       - Roblox writes logs asynchronously
+       - BloxChat may read a log entry before it's fully written
+       - Wait 5-10 seconds after joining for JobId to stabilize
+    
+    3. **Outdated log files:**
+       - Old log files may interfere with detection
+       - Clear old logs from the Roblox logs folder
+       - Rejoin your game to generate fresh logs
+  </Accordion>
+  
+  <Accordion title="No channel detected (stuck on 'No channel')">
+    **Symptoms:**
+    - Channel header shows "No channel" or similar
+    - Can't send messages
+    - BloxChat not detecting any Roblox game
+    
+    **Solutions:**
+    
+    1. **Join a Roblox game:**
+       - BloxChat requires an active game session
+       - Channel only appears after joining a game
+    
+    2. **Verify log path:**
+       - Follow steps in "Channel doesn't switch" above
+       - Ensure logs path points to active Roblox installation
+    
+    3. **Check log file format:**
+       - Roblox must be writing logs in the expected format
+       - Verify log files contain JobId entries
+       - Contact support if log format has changed
+    
+    4. **Restart both Roblox and BloxChat:**
+       - Close both applications
+       - Open BloxChat first
+       - Then join a Roblox game
+       - Wait for channel detection (5-10 seconds)
+  </Accordion>
+</AccordionGroup>
+
+## Message Sending Issues
+
+Problems sending or receiving chat messages.
+
+<AccordionGroup>
+  <Accordion title="Messages don't send">
+    **Symptoms:**
+    - Typing message but it doesn't appear in chat
+    - No error message displayed
+    - Message disappears after pressing Enter
+    
+    **Solutions:**
+    
+    1. **Check message length:**
+       - Look at the character counter in the input field
+       - If red, your message exceeds the limit (default: 280 chars)
+       - Shorten your message and try again
+    
+    2. **Verify you're in a channel:**
+       - Ensure channel header shows a valid JobId
+       - If showing "No channel", join a Roblox game first
+    
+    3. **Check for rate limits:**
+       - Default: 4 messages per 5 seconds
+       - Wait a few seconds and try again
+       - Error message will appear if rate-limited
+    
+    4. **Verify connection:**
+       - Check if you're still logged in
+       - Look for connection errors at the bottom of the window
+       - Try restarting BloxChat
+  </Accordion>
+  
+  <Accordion title="Error: Rate limit hit">
+    **Symptoms:**
+    - "Rate limit hit" error message
+    - Can't send messages temporarily
+    - Timer showing retry countdown
+    
+    **Why this happens:**
+    - Prevents spam and abuse
+    - Default limit: 4 messages per 5 seconds
+    - Limits are configurable per channel
+    
+    **Solutions:**
+    
+    1. **Wait for the cooldown:**
+       - The error message shows how long to wait
+       - Usually 5 seconds or less
+       - Retry after the timer expires
+    
+    2. **Avoid rapid message sending:**
+       - Space out your messages
+       - Combine multiple thoughts into one message
+       - Use auto-join messages sparingly
+    
+    <Note>
+      Rate limits are per-user, per-channel. Switching channels resets your rate limit counter.
+    </Note>
+  </Accordion>
+  
+  <Accordion title="Can't see other users' messages">
+    **Symptoms:**
+    - Chat appears empty
+    - Only seeing your own messages
+    - Other users report they can see messages
+    
+    **Solutions:**
+    
+    1. **Verify you're in the same channel:**
+       - Confirm your JobId matches other users'
+       - You must be in the same Roblox server
+       - Ask others to share their JobId for comparison
+    
+    2. **Check connection:**
+       - Messages require active server connection
+       - Look for connection errors in BloxChat
+       - Restart if disconnected
+    
+    3. **Clear and refresh:**
+       - Run `/clear` to clear local chat history
+       - Switch to a different channel and back
+       - Restart BloxChat
+    
+    4. **Verify session is active:**
+       - Check you're still logged in
+       - Session may have expired
+       - Re-verify if necessary
+  </Accordion>
+  
+  <Accordion title="Messages delayed or out of order">
+    **Symptoms:**
+    - Messages appear several seconds late
+    - Messages arrive in wrong chronological order
+    - Conversation feels laggy
+    
+    **Solutions:**
+    
+    1. **Check network latency:**
+       - Test your internet connection speed
+       - High latency causes message delays
+       - Move closer to WiFi router or use wired connection
+    
+    2. **Verify server load:**
+       - High server load can cause delays
+       - Delays affect all users equally
+       - Wait for server to recover
+    
+    3. **Restart BloxChat:**
+       - Connection may be degraded
+       - Fresh connection often resolves delays
+    
+    4. **Update BloxChat:**
+       - Newer versions may have performance improvements
+       - Check for updates on startup
+  </Accordion>
+</AccordionGroup>
+
+## UI and Display Issues
+
+Problems with the BloxChat user interface.
+
+<AccordionGroup>
+  <Accordion title="Images not loading">
+    **Symptoms:**
+    - Image URLs shown instead of inline previews
+    - Broken image icons
+    - Media doesn't display
+    
+    **Solutions:**
+    
+    1. **Enable image loading:**
+       - Open **Settings**
+       - Go to **Privacy & Media**
+       - Check **Load external images inside chat**
+       - Click **Save Settings**
+    
+    2. **Verify URL is valid:**
+       - Ensure the URL points to a direct image file
+       - Supported formats: JPG, PNG, GIF, WebP
+       - URLs must be publicly accessible
+    
+    3. **Check network access:**
+       - Firewall may block external image requests
+       - Try accessing the image URL in your browser
+       - Temporarily disable VPN to test
+  </Accordion>
+  
+  <Accordion title="App window too transparent or too opaque">
+    **Symptoms:**
+    - Can't read text (too transparent)
+    - Can't see game through window (too opaque)
+    - Opacity changed unexpectedly
+    
+    **Solutions:**
+    
+    1. **Adjust GUI opacity:**
+       - Open **Settings**
+       - Find **GUI Opacity** under Appearance
+       - Drag slider to desired level (20% - 100%)
+       - Preview changes in real-time
+       - Click **Save Settings**
+    
+    2. **Recommended opacity levels:**
+       - **100%**: Fully visible, best for reading
+       - **80%**: Slight transparency, good balance
+       - **60%**: Overlay mode, see game underneath
+       - **40% or lower**: Minimal visibility, advanced users only
+  </Accordion>
+  
+  <Accordion title="Window doesn't stay on top">
+    **Symptoms:**
+    - BloxChat window hides behind Roblox
+    - Can't see chat while playing
+    - Window loses focus
+    
+    **Solutions:**
+    
+    BloxChat is designed to stay on top of Roblox automatically. If this isn't working:
+    
+    1. **Verify Roblox is in windowed mode:**
+       - BloxChat can't overlay fullscreen applications
+       - Set Roblox to windowed or borderless windowed mode
+    
+    2. **Restart BloxChat:**
+       - Close and reopen the application
+       - Window should restore on-top behavior
+    
+    3. **Check Windows settings:**
+       - Some Windows features interfere with always-on-top
+       - Disable "Always on Top" for other apps
+       - Ensure no conflicting window managers are running
+  </Accordion>
+  
+  <Accordion title="Text too small or too large">
+    **Symptoms:**
+    - Font size uncomfortable to read
+    - UI elements don't fit properly
+    - Text overflows or gets cut off
+    
+    **Solutions:**
+    
+    BloxChat uses fixed font sizes for consistency. However:
+    
+    1. **Adjust Windows display scaling:**
+       - Right-click desktop > Display settings
+       - Change "Scale and layout" percentage
+       - 100% is default, try 125% or 150% for larger text
+    
+    2. **Resize the window:**
+       - Drag window corners to make it larger
+       - More space allows better text readability
+    
+    3. **Report the issue:**
+       - If text is consistently too small/large for your setup
+       - Submit feedback for future UI improvements
+  </Accordion>
+</AccordionGroup>
+
+## Self-Hosted Backend Issues
+
+Problems specific to running your own BloxChat backend server.
+
+<AccordionGroup>
+  <Accordion title="Backend won't start">
+    **Symptoms:**
+    - `bun run dev` or `bun run start` fails
+    - Error messages in console
+    - Server crashes immediately
+    
+    **Solutions:**
+    
+    <Steps>
+      <Step title="Verify environment variables">
+        Check `apps/server/.env` contains:
+        ```env
+        JWT_SECRET=your_32_to_64_char_secret
+        VERIFICATION_SECRET=your_64_char_secret
+        VERIFICATION_PLACE_ID=123456789
+        ```
+        
+        Requirements:
+        - `JWT_SECRET`: 32-64 characters
+        - `VERIFICATION_SECRET`: 64+ characters
+        - `VERIFICATION_PLACE_ID`: Valid Roblox Place ID
+      </Step>
+      
+      <Step title="Install dependencies">
+        ```bash
+        bun install
+        ```
+        
+        Ensure all packages are installed correctly.
+      </Step>
+      
+      <Step title="Check port availability">
+        Default port is 3000. If it's in use:
+        - Stop other processes using port 3000
+        - Or configure a different port
+      </Step>
+      
+      <Step title="Review error logs">
+        Read the console output carefully:
+        - Look for missing dependencies
+        - Check for syntax errors
+        - Verify database connections (if applicable)
+      </Step>
+    </Steps>
+  </Accordion>
+  
+  <Accordion title="Verification fails on self-hosted server">
+    **Symptoms:**
+    - Verification code doesn't work
+    - Game can't communicate with backend
+    - "Invalid verification secret" errors
+    
+    **Solutions:**
+    
+    1. **Verify game integration:**
+       - Ensure your Roblox game has the verification script
+       - Script must send verification requests to your backend
+       - Confirmation that game uses matching `VERIFICATION_SECRET`
+    
+    2. **Check VERIFICATION_PLACE_ID:**
+       - Must match your Roblox game's Place ID
+       - Place ID is visible in Roblox Studio or game URL
+    
+    3. **Verify API endpoint accessibility:**
+       - Game must be able to reach your backend API
+       - Test API endpoint from browser or curl
+       - Ensure firewall allows incoming requests
+    
+    4. **Review backend logs:**
+       - Look for verification requests in console output
+       - Check if requests are being received
+       - Verify error messages for clues
+  </Accordion>
+  
+  <Accordion title="Chat messages not syncing between users">
+    **Symptoms:**
+    - Users in same channel can't see each other's messages
+    - Messages only visible to sender
+    - Channels isolated incorrectly
+    
+    **Solutions:**
+    
+    1. **Verify WebSocket/polling is working:**
+       - Check backend logs for message broadcast events
+       - Ensure tRPC subscriptions are functioning
+       - Test with two clients on the same machine
+    
+    2. **Confirm JobId matching:**
+       - Both users must report the same JobId
+       - Check that JobId is being extracted from logs correctly
+       - Verify channel routing logic in backend
+    
+    3. **Check backend implementation:**
+       - Ensure message broadcasting is implemented
+       - Verify in-memory or database message storage
+       - Review chat router code for bugs
+    
+    4. **Test with hosted backend:**
+       - Point both clients to the official hosted backend
+       - If this works, issue is in your backend implementation
+       - Compare your code with the official source
+  </Accordion>
+</AccordionGroup>
+
+## General Troubleshooting Steps
+
+If none of the above solutions work, try these general fixes.
+
+<Steps>
+  <Step title="Restart everything">
+    1. Close BloxChat completely
+    2. Close all Roblox windows
+    3. Wait 10 seconds
+    4. Open BloxChat first
+    5. Then join a Roblox game
+  </Step>
+  
+  <Step title="Reset to defaults">
+    1. Open **Settings** in BloxChat
+    2. Click **Reset to default host** (Connection section)
+    3. Click **Use default Path** (Roblox Integration section)
+    4. Set GUI Opacity to 100%
+    5. Click **Save Settings**
+  </Step>
+  
+  <Step title="Check for updates">
+    1. BloxChat checks for updates on startup
+    2. If an update is available, install it
+    3. Restart after updating
+    4. Test if issue is resolved
+  </Step>
+  
+  <Step title="Clear local data (advanced)">
+    <Warning>
+      This will log you out and clear all settings.
+    </Warning>
+    
+    1. Close BloxChat
+    2. Delete local storage/cache files (location varies by platform)
+    3. Reopen BloxChat
+    4. Complete verification again
+    5. Reconfigure settings
+  </Step>
+  
+  <Step title="Reinstall BloxChat">
+    As a last resort:
+    
+    1. Uninstall BloxChat from Windows
+    2. Download the latest installer from [Releases](https://github.com/logixism/bloxchat/releases/latest)
+    3. Install and launch
+    4. Complete verification
+    5. Reconfigure settings
+  </Step>
+</Steps>
+
+## Getting Help
+
+If you're still experiencing issues after trying these solutions:
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/logixism/bloxchat/issues">
+    Report bugs and request features on GitHub
+  </Card>
+  
+  <Card title="Development Guide" icon="code" href="/development">
+    Learn how to run BloxChat locally for debugging
+  </Card>
+</CardGroup>
+
+### Information to Include in Bug Reports
+
+When reporting issues, include:
+
+- **BloxChat version** (found in Settings > About)
+- **Operating System** (Windows 10/11, version)
+- **API Server URL** (default or custom)
+- **Steps to reproduce** the issue
+- **Expected behavior** vs. **actual behavior**
+- **Error messages** or screenshots
+- **Console logs** (if running in dev mode)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Review configuration options to optimize settings
+  </Card>
+  
+  <Card title="Verification Flow" icon="shield-check" href="/guides/verification-flow">
+    Understand how verification works
+  </Card>
+</CardGroup>

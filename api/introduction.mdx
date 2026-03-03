@@ -1,0 +1,249 @@
+---
+title: 'API Introduction'
+description: 'Overview of the BloxChat tRPC API architecture, connection methods, and key features'
+---
+
+## What is the BloxChat API?
+
+BloxChat uses [tRPC](https://trpc.io) to provide a type-safe, end-to-end API for real-time chat communication. Built on top of tRPC's modern RPC framework, the API offers both HTTP and WebSocket support for queries, mutations, and real-time subscriptions.
+
+<Info>
+  tRPC eliminates the need for traditional REST endpoints by providing direct, type-safe function calls between client and server.
+</Info>
+
+## API Structure
+
+The BloxChat API is organized into two main routers:
+
+<CardGroup cols={2}>
+  <Card title="Auth Router" icon="lock" href="/api/auth/overview">
+    Handles user authentication, verification flows, and JWT token management
+  </Card>
+  <Card title="Chat Router" icon="message" href="/api/chat/overview">
+    Manages chat messages, subscriptions, and rate limiting
+  </Card>
+</CardGroup>
+
+### Router Definition
+
+The API structure is defined in `packages/api/src/root.ts`:
+
+```typescript packages/api/src/root.ts
+import { authRouter } from "./routers/auth";
+import { chatRouter } from "./routers/chat";
+import { t } from "./trpc";
+
+export const appRouter = t.router({
+  chat: chatRouter,
+  auth: authRouter,
+});
+
+export type AppRouter = typeof appRouter;
+```
+
+## Connection Methods
+
+BloxChat supports dual-protocol communication for maximum flexibility:
+
+### HTTP Adapter
+
+Used for queries and mutations:
+
+<CodeGroup>
+```typescript Client Usage
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '@bloxchat/api';
+
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:3000',
+      headers: () => ({
+        authorization: `Bearer ${getToken()}`,
+      }),
+    }),
+  ],
+});
+```
+
+```typescript Server Implementation
+import { createHTTPServer } from '@trpc/server/adapters/standalone';
+import { appRouter, createContext } from '@bloxchat/api';
+import cors from 'cors';
+
+const serverInstance = createHTTPServer({
+  router: appRouter,
+  createContext,
+  middleware: cors(),
+});
+
+serverInstance.listen(3000);
+```
+</CodeGroup>
+
+### WebSocket Adapter
+
+Required for real-time subscriptions:
+
+<CodeGroup>
+```typescript Client Usage
+import { createTRPCProxyClient, wsLink } from '@trpc/client';
+import type { AppRouter } from '@bloxchat/api';
+
+const client = createTRPCProxyClient<AppRouter>({
+  links: [
+    wsLink({
+      client: new WebSocket('ws://localhost:3000'),
+    }),
+  ],
+});
+
+// Subscribe to chat messages
+const subscription = client.chat.subscribe.subscribe(
+  { channel: 'global' },
+  {
+    onData: (message) => {
+      console.log('New message:', message);
+    },
+  }
+);
+```
+
+```typescript Server Implementation
+import { applyWSSHandler } from '@trpc/server/adapters/ws';
+import { WebSocketServer } from 'ws';
+
+const wss = new WebSocketServer({
+  server: serverInstance,
+});
+
+const handler = applyWSSHandler({
+  wss,
+  router: appRouter,
+  createContext,
+});
+
+// Graceful shutdown support
+process.on('SIGTERM', () => {
+  handler.broadcastReconnectNotification();
+  wss.close();
+});
+```
+</CodeGroup>
+
+## Base URL
+
+The default server configuration runs on:
+
+```
+HTTP: http://localhost:3000
+WebSocket: ws://localhost:3000
+```
+
+<Note>
+  In production, replace `localhost:3000` with your deployed API endpoint.
+</Note>
+
+## WebSocket Subscriptions
+
+BloxChat leverages tRPC's subscription capabilities for real-time features:
+
+- **Chat messages**: Real-time message delivery via `chat.subscribe`
+- **Automatic reconnection**: Server broadcasts reconnect notifications on shutdown
+- **Channel-based**: Subscribe to specific channels for filtered message streams
+
+```typescript Example Subscription
+for await (const message of client.chat.subscribe.subscribe({ channel: 'global' })) {
+  console.log(message.author.name, ':', message.content);
+}
+```
+
+## Rate Limiting
+
+BloxChat implements comprehensive rate limiting at multiple levels:
+
+<AccordionGroup>
+  <Accordion title="Authentication Endpoints">
+    - **Refresh tokens**: 4 requests per hour per user
+    - **Game verification**: 20 requests per minute per user
+    - **Check verification**: 60 requests per minute per session
+  </Accordion>
+  
+  <Accordion title="Chat Endpoints">
+    Rate limits are configurable per channel via `getChatLimitsForChannel()`:
+    - Message length limits
+    - Message rate limits (requests per time window)
+    - Configurable per channel for flexibility
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Rate limit errors return HTTP 429 with a `retryAfterMs` field indicating when to retry.
+</Warning>
+
+## Procedure Types
+
+BloxChat defines three types of procedures:
+
+| Procedure Type | Authentication | Use Case | Example |
+|----------------|----------------|----------|----------|
+| `publicProcedure` | None | Public endpoints | `auth.beginVerification` |
+| `protectedProcedure` | JWT required | Authenticated actions | `chat.publish` |
+| `gameVerificationProcedure` | Verification secret | Game server callbacks | `auth.completeVerification` |
+
+See the [Authentication guide](/api/authentication) for details on JWT tokens and protected procedures.
+
+## Error Handling
+
+tRPC uses standardized error codes. Common BloxChat errors:
+
+<CodeGroup>
+```typescript Error Codes
+// UNAUTHORIZED - Missing or invalid JWT
+throw new TRPCError({ code: 'UNAUTHORIZED' });
+
+// BAD_REQUEST - Invalid input or expired session
+throw new TRPCError({ 
+  code: 'BAD_REQUEST',
+  message: 'Verification code expired' 
+});
+
+// TOO_MANY_REQUESTS - Rate limit exceeded
+throw new TRPCError({ 
+  code: 'TOO_MANY_REQUESTS',
+  message: 'Rate limit hit. Try again in 30s.' 
+});
+```
+
+```typescript Client Handling
+try {
+  await client.chat.publish.mutate({ 
+    content: 'Hello!',
+    channel: 'global' 
+  });
+} catch (error) {
+  if (error.data?.code === 'UNAUTHORIZED') {
+    // Refresh token or re-authenticate
+  } else if (error.data?.code === 'TOO_MANY_REQUESTS') {
+    // Back off and retry
+  }
+}
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn how JWT authentication works in BloxChat
+  </Card>
+  <Card title="Auth Router" icon="shield" href="/api/auth/overview">
+    Explore authentication endpoints
+  </Card>
+  <Card title="Chat Router" icon="comments" href="/api/chat/overview">
+    Explore chat endpoints
+  </Card>
+  <Card title="tRPC Documentation" icon="book" href="https://trpc.io">
+    Deep dive into tRPC concepts
+  </Card>
+</CardGroup>
